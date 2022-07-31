@@ -460,37 +460,37 @@ function init() {
 
 			var patternTest = patternBitstring
 			var thisVoronoiVerts = connectionPatterns_toVoronoiVerts[patternTest]
-			if (thisVoronoiVerts) { voronoiVerts[x][y] = (thisVoronoiVerts.map(v => voronoiCellVertexPositions[v]).map(([dx, dy]) => [x+dx, y+dy])); continue }
+			if (thisVoronoiVerts) { voronoiVerts[x][y] = (thisVoronoiVerts); continue }
 
 			patternTest = bitstringTransform_90deg(patternBitstring)
 			thisVoronoiVerts = voronoiVertsTransform_90deg(voronoiVertsTransform_90deg(voronoiVertsTransform_90deg(connectionPatterns_toVoronoiVerts[patternTest]))) // undo the rotation
-			if (thisVoronoiVerts) { voronoiVerts[x][y] = (thisVoronoiVerts.map(v => voronoiCellVertexPositions[v]).map(([dx, dy]) => [x+dx, y+dy])); continue }
+			if (thisVoronoiVerts) { voronoiVerts[x][y] = (thisVoronoiVerts); continue }
 
 			patternTest = bitstringTransform_90deg(bitstringTransform_90deg(patternBitstring))
 			thisVoronoiVerts = voronoiVertsTransform_90deg(voronoiVertsTransform_90deg(connectionPatterns_toVoronoiVerts[patternTest])) // undo the rotation
-			if (thisVoronoiVerts) { voronoiVerts[x][y] = (thisVoronoiVerts.map(v => voronoiCellVertexPositions[v]).map(([dx, dy]) => [x+dx, y+dy])); continue }
+			if (thisVoronoiVerts) { voronoiVerts[x][y] = (thisVoronoiVerts); continue }
 
 			patternTest = bitstringTransform_90deg(bitstringTransform_90deg(bitstringTransform_90deg(patternBitstring)))
 			thisVoronoiVerts = voronoiVertsTransform_90deg(connectionPatterns_toVoronoiVerts[patternTest]) // undo the rotation
-			if (thisVoronoiVerts) { voronoiVerts[x][y] = (thisVoronoiVerts.map(v => voronoiCellVertexPositions[v]).map(([dx, dy]) => [x+dx, y+dy])); continue }
+			if (thisVoronoiVerts) { voronoiVerts[x][y] = (thisVoronoiVerts); continue }
 			
 			// test mirrored
 			
 			var patternTest = bitstringTransform_mirror(patternBitstring)
 			var thisVoronoiVerts = voronoiVertsTransform_mirror(connectionPatterns_toVoronoiVerts[patternTest])
-			if (thisVoronoiVerts) { voronoiVerts[x][y] = (thisVoronoiVerts.map(v => voronoiCellVertexPositions[v]).map(([dx, dy]) => [x+dx, y+dy])); continue }
+			if (thisVoronoiVerts) { voronoiVerts[x][y] = (thisVoronoiVerts); continue }
 
 			patternTest = bitstringTransform_mirror(bitstringTransform_90deg(patternBitstring))
 			thisVoronoiVerts = voronoiVertsTransform_90deg( voronoiVertsTransform_90deg(voronoiVertsTransform_90deg(voronoiVertsTransform_mirror(connectionPatterns_toVoronoiVerts[patternTest]))) ) // undo the rotation
-			if (thisVoronoiVerts) { voronoiVerts[x][y] = (thisVoronoiVerts.map(v => voronoiCellVertexPositions[v]).map(([dx, dy]) => [x+dx, y+dy])); continue }
+			if (thisVoronoiVerts) { voronoiVerts[x][y] = (thisVoronoiVerts); continue }
 
 			patternTest = bitstringTransform_mirror( bitstringTransform_90deg(bitstringTransform_90deg(patternBitstring)) )
 			thisVoronoiVerts = voronoiVertsTransform_90deg( voronoiVertsTransform_90deg(voronoiVertsTransform_mirror(connectionPatterns_toVoronoiVerts[patternTest])) ) // undo the rotation
-			if (thisVoronoiVerts) { voronoiVerts[x][y] = (thisVoronoiVerts.map(v => voronoiCellVertexPositions[v]).map(([dx, dy]) => [x+dx, y+dy])); continue }
+			if (thisVoronoiVerts) { voronoiVerts[x][y] = (thisVoronoiVerts); continue }
 
 			patternTest = bitstringTransform_mirror( bitstringTransform_90deg(bitstringTransform_90deg(bitstringTransform_90deg(patternBitstring))) )
 			thisVoronoiVerts = voronoiVertsTransform_90deg( voronoiVertsTransform_mirror(connectionPatterns_toVoronoiVerts[patternTest]) ) // undo the rotation
-			if (thisVoronoiVerts) { voronoiVerts[x][y] = (thisVoronoiVerts.map(v => voronoiCellVertexPositions[v]).map(([dx, dy]) => [x+dx, y+dy])); continue }
+			if (thisVoronoiVerts) { voronoiVerts[x][y] = (thisVoronoiVerts); continue }
 			
 			// nothing found
 			console.log("No pattern matched for " + patternBitstring)
@@ -499,10 +499,10 @@ function init() {
 
 	// draw voronoi :)
 	var voronoiSVG = initSVG(pixelSize*imgWidth, pixelSize*imgHeight);
-	var skipSimilarityGraph = true;
+	var skipSimilarityGraph = false;
 	for (var x = 0; x < imgWidth; x++) {
 		for (var y = 0; y < imgHeight; y++) {
-			makePolygon(voronoiSVG, voronoiVerts[x][y].map(([x, y]) => [pixelSize*x, pixelSize*y]), rgbToHex(...getPixelData(x, y)))
+			makePolygon(voronoiSVG, voronoiVerts[x][y].map(v => voronoiCellVertexPositions[v]).map(([dx, dy]) => [x+dx, y+dy]).map(([x, y]) => [pixelSize*x, pixelSize*y]), rgbToHex(...getPixelData(x, y)))
 
 			// draw similarity graph on top
 			if (skipSimilarityGraph) continue;
