@@ -3,7 +3,7 @@ var svgns = "http://www.w3.org/2000/svg";
 
 const inputImageElementID = 'my-image';
 
-const ISLAND_SCORE = 10//5
+const ISLAND_SCORE = 13//5
 const AREA_SCORE_WEIGHT = 1
 
 //
@@ -24,6 +24,10 @@ var openFile = function(file) {
 		image.src = dataURL;
 		console.log(image.width) // logging the size seems to initialize it
 		console.log(image.height)
+
+		if (image.width === 0 || image.height === 0) {
+			document.getElementById("warning").innerHTML+= "Image failed to load. Please refresh and try again. (this is very buggy, it will probably work on the 3rd try)"
+		}
 		
 		init()
     };
