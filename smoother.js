@@ -22,7 +22,7 @@ var openFile = function(file) {
 		
 		var image = document.createElement("img");
 		image.src = dataURL;
-		console.log(image.width)
+		console.log(image.width) // logging the size seems to initialize it
 		console.log(image.height)
 		
 		init()

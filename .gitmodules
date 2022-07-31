@@ -1,0 +1,3 @@
+[submodule "lib/BSpline"]
+	path = lib/BSpline
+	url = git@github.com:Tagussan/BSpline.git
