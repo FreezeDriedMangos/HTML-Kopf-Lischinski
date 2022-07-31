@@ -162,17 +162,22 @@ function init() {
 	}
 
 	// similarity graph
-	var similarityGraph = []; // format: similarityGraph[x][y] => [upperLeftPixel is similar, upperPixel is similar, upperRightPixel is similar, ...] // (includes self (always true), and out-of-bounds pixels are never considered similar)
+	
+	// for a given pixel #, its neighbors' relative coordinates are listed in deltas with the following indexes
+	// 0 1 2
+	// 7 # 3
+	// 6 5 4
+
+	var similarityGraph = []; // format: similarityGraph[x][y] => [upperLeftPixel is similar, upperPixel is similar, upperRightPixel is similar, ...] // (out-of-bounds pixels are never considered similar)
 	var deltas = [
-		[-1,-1], [0,-1], [1,-1],
-		[-1, 0], [0, 0], [1, 0],
-		[-1, 1], [0, 1], [1, 1],
+		[-1,-1], [0,-1], [1,-1], [1,0], [1, 1], [0,1], [-1,1], [-1,0]
 	];
-	var deltaDownRight_index = 8
+	var deltaDownRight_index = 4
 	var deltaDownLeft_index = 6
-	var deltaRight_index = 5
+	var deltaRight_index = 3
 	var deltaUpLeft_index = 0
 	var deltaUpRight_index = 2
+
 
 	for (var x = 0; x < imgWidth; x++) {
 		similarityGraph.push([])
@@ -341,7 +346,7 @@ function init() {
 		// 2 connections
 		"00010100": [0, 5, 9, 13],
 		"00100100": [0, 3, 6, 9, 13],
-		"00100010": [14, 3, 6, 11],
+		"00100010": [14, 0, 3, 6, 8, 11],
 		"00010001": [1, 5, 9, 13], // is this right?
 		"00001010": [0, 4, 7, 10, 11, 14],
 		"01100000": [1, 5, 6, 8, 12], // unsure
@@ -354,6 +359,9 @@ function init() {
 
 		"00001110": [0, 4, 7, 9, 13, 14], 
 		"00011010": [0, 5, 9, 10, 11, 14],
+
+		"01001010": [1, 5, 7, 10, 11, 14],
+		"10100010": [15, 2, 3, 6, 11, 14],
 
 		// 4 connections
 		"01100011": [1, 5, 6, 11, 13], 
@@ -412,7 +420,7 @@ function init() {
 	function connectionArrayToBitString(arr) {
 		// arr is of form [0, 1, 2, 7, -, 3, 6, 5, 4]
 		//                 0  1  2  3  4  5  6  7  8
-		const newArr = [arr[0], arr[1], arr[2], arr[5], arr[8], arr[7], arr[6], arr[3]]
+		const newArr = arr //[arr[0], arr[1], arr[2], arr[5], arr[8], arr[7], arr[6], arr[3]]
 		return newArr.reduce((snowball, snow) => snowball + (snow? "1" : "0"), "")
 	}
 
@@ -435,7 +443,7 @@ function init() {
 		return verts.map(v => voronoiVertMirror[v])
 	}
 
-	var voronoiVerts = []
+	var voronoiVerts = [] // voronoiVerts[x][y] => list of [absoluteX, absoluteY] points defining the voronoi cell's shape for this pixel
 	for (var x = 0; x < imgWidth; x++) {
 		voronoiVerts.push([])
 		
