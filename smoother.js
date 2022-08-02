@@ -296,6 +296,84 @@ function init() {
 	// 	}
 	// }
 
+
+	
+	// fix corners where 3 or 4 dissimilar colors meet	
+	var tempConnections = []
+	// function connectSimilarNeighbors(x, y, similarTo) {
+	// 	for (var i = 1; i < 8; i += 2) {
+	// 		delta = deltas[i]
+	// 		var nX = x + delta[0] // neighbor we may be adding connections to
+	// 		var nY = y + delta[1]
+
+	// 		if (dissimilarColors(similarTo, yuvImage[nX][nY])) continue
+	// 		if (!similarityGraph[x][y][i]) tempConnections.push([x, y, i])
+	// 		similarityGraph[x][y][i] = true
+
+	// 		var neighborRelativeI = (i+4)%8
+	// 		if (!similarityGraph[nX][nY][neighborRelativeI]) tempConnections.push([nX, nY, neighborRelativeI])
+	// 		similarityGraph[nX][nY][neighborRelativeI] = true
+	// 	}
+	// }
+	// function addTempConnection(x, y, toNeighbor) {
+	// 	// console.log({x, y, toNeighbor, similar:similarityGraph[x][y][toNeighbor]})
+	// 	// if (!similarityGraph[x][y][toNeighbor]) tempConnections.push([x, y, toNeighbor])
+	// 	// similarityGraph[x][y][toNeighbor] = true
+
+	// 	var delta = deltas[toNeighbor] // neighbor we're connecting to
+	// 	var newX = x + delta[0]
+	// 	var newY = y + delta[1]
+
+	// 	// var neighborRelative = (toNeighbor+4)%8
+	// 	// if (!similarityGraph[newX][newY][neighborRelative]) tempConnections.push([newX, newY, neighborRelative])
+	// 	// similarityGraph[newX][newY][neighborRelative] = true
+		
+	// 	// also add connections to all orthogonal neighbors that are similar to `toNeighbor`
+	// 	connectSimilarNeighbors(x, y, yuvImage[newX][newY])
+	// 	connectSimilarNeighbors(newX, newY, yuvImage[x][y])
+	// }
+
+	// for (var x = 0; x < imgWidth-1; x++) {
+	// 	for (var y = 0; y < imgHeight-1; y++) {
+	// 		var dissimilars = []
+			
+	// 		if (!dissimilarColors(yuvImage[x][y], yuvImage[x+1][y+1]) || !dissimilarColors(yuvImage[x+1][y], yuvImage[x][y+1])) continue; // don't cross connected diagonals
+
+	// 		if (dissimilarColors(yuvImage[x][y], yuvImage[x+1][y])  ) dissimilars.push(yuvImage[x+1][y]  )	
+	// 		if (dissimilarColors(yuvImage[x][y], yuvImage[x][y+1])  ) dissimilars.push(yuvImage[x][y+1]  )	
+	// 		if (dissimilarColors(yuvImage[x][y], yuvImage[x+1][y+1])) dissimilars.push(yuvImage[x+1][y+1])		
+
+	// 		var atLeastThreeDissimilars = false
+	// 		while(dissimilars.length > 0) {
+	// 			var testColor = dissimilars.pop()
+	// 			for (var i = 0; i < dissimilars.length; i++) {
+	// 				if (dissimilarColors(testColor, dissimilars[i])) {
+	// 					atLeastThreeDissimilars = true
+	// 					break
+	// 				}
+	// 			}
+
+	// 			if (atLeastThreeDissimilars) break
+	// 		}
+
+	// 		if (atLeastThreeDissimilars) {
+				
+	// 			// 0 1 2
+	// 			// 7 # 3
+	// 			// 6 5 4
+	// 			addTempConnection(x+1, y  , 7)
+	// 			addTempConnection(x  , y  , 5)
+	// 			addTempConnection(x  , y  , 3)
+	// 			addTempConnection(x  , y+1, 1)
+	// 			addTempConnection(x+1, y+1, 7)
+	// 			addTempConnection(x  , y+1, 3)
+	// 			addTempConnection(x+1, y+1, 1)
+	// 			addTempConnection(x+1, y  , 5)
+	// 		}
+	// 	}
+	// }
+
+
 	//
 	// Converting from similarity graph to voronoi diagram
 	//
@@ -507,57 +585,51 @@ function init() {
 	}
 
 	// fix corners where 3 or 4 dissimilar colors meet
-	// let's just make this manual
-	// for (var x = 0; x < imgWidth-1; x++) {
-	// 	for (var y = 0; y < imgHeight-1; y++) {
-	// 		//if (yuvImage[x][y][3] === 0) continue // if this is a transparent pixel, ignore it
+	const HEAL_3_COLOR_MEETINGS = false; // TODO: alternate healing where only certain patterns are changed, and they're changed according to their neighbors
+	// better healing: pick one of the four involved corners to explode
+	// pick the corner with the fewest connections, breaking ties by the angle (eg an acute angle beats a right angle beats a straight line) (11 beats 101/0101 beats 1001 beats 10001)
+	// then, on the exploding corner, find the vertex not shared by any of the four involved pixels. mark this index.
+	// moving clockwise, check each of the four pixels. check each vertex in a counter clockwise order, and when you find a vertex not shared by at least 2 other pixels, append it vertex to a list
+	// finally, replace the exploding corner's marked index with the created list
+	// NOTE: to do this, I would need to have already converted the voronoi indices to globally unique indices at this point
+	if (HEAL_3_COLOR_MEETINGS) {
+		for (var x = 0; x < imgWidth-1; x++) {
+			for (var y = 0; y < imgHeight-1; y++) {
+				if (!dissimilarColors(yuvImage[x][y], yuvImage[x+1][y+1]) || !dissimilarColors(yuvImage[x+1][y], yuvImage[x][y+1])) continue; // don't cross connected diagonals
 
-	// 		var dissimilars = []
-	// 		// if at least two of these
-	// 		// var pair1Dissimilar = dissimilarColors(yuvImage[x][y],   yuvImage[x+1][y])   ? 1 : 0
-	// 		// var pair2Dissimilar = dissimilarColors(yuvImage[x][y],   yuvImage[x][y+1])   ? 1 : 0
-	// 		// var pair3Dissimilar = dissimilarColors(yuvImage[x][y],   yuvImage[x+1][y+1]) ? 1 : 0
-	// 		// var topLeftPixelHasAtLeastTwoDissimilars = pair1Dissimilar + pair2Dissimilar + pair3Dissimilar >= 2
+				var dissimilars = []
+				// ignore transparent pixels
+				if (dissimilarColors(yuvImage[x][y], yuvImage[x+1][y])  ) dissimilars.push(yuvImage[x+1][y]  )	
+				if (dissimilarColors(yuvImage[x][y], yuvImage[x][y+1])  ) dissimilars.push(yuvImage[x][y+1]  )	
+				if (dissimilarColors(yuvImage[x][y], yuvImage[x+1][y+1])) dissimilars.push(yuvImage[x+1][y+1])		
 
-	// 		// ignore transparent pixels
-	// 		if (/*yuvImage[x+1][y]  [3] !== 0 &&*/ dissimilarColors(yuvImage[x][y], yuvImage[x+1][y])  ) dissimilars.push(yuvImage[x+1][y]  )	
-	// 		if (/*yuvImage[x][y+1]  [3] !== 0 &&*/ dissimilarColors(yuvImage[x][y], yuvImage[x][y+1])  ) dissimilars.push(yuvImage[x][y+1]  )	
-	// 		if (/*yuvImage[x+1][y+1][3] !== 0 &&*/ dissimilarColors(yuvImage[x][y], yuvImage[x+1][y+1])) dissimilars.push(yuvImage[x+1][y+1])		
-			
-	// 		console.log(`${x},${y} ${dissimilars.length}`)
+				var atLeastThreeDissimilars = false
+				while(dissimilars.length > 0) {
+					var testColor = dissimilars.pop()
+					for (var i = 0; i < dissimilars.length; i++) {
+						if (dissimilarColors(testColor, dissimilars[i])) {
+							atLeastThreeDissimilars = true
+							break
+						}
+					}
 
-	// 		var atLeastThreeDissimilars = false
-	// 		while(dissimilars.length > 0) {
-	// 			var testColor = dissimilars.pop()
-	// 			for (var i = 0; i < dissimilars.length; i++) {
-	// 				if (dissimilarColors(testColor, dissimilars[i])) {
-	// 					atLeastThreeDissimilars = true
-	// 					break
-	// 				}
-	// 			}
+					if (atLeastThreeDissimilars) break
+				}
 
-	// 			if (atLeastThreeDissimilars) break
-	// 		}
-
-	// 		// // and at least one of these
-	// 		// var pair4Dissimilar = dissimilarColors(yuvImage[x+1][y],   yuvImage[x][y+1])   && 
-	// 		// var pair5Dissimilar = dissimilarColors(yuvImage[x+1][y],   yuvImage[x+1][y+1])
-
-	// 		// var pair6Dissimilar = dissimilarColors(yuvImage[x][y+1],   yuvImage[x+1][y+1])
-
-	// 		// var atLeastOneOtherPixelHasAtLeastOneOtherDissimilar = pair4Dissimilar || pair5Dissimilar || pair6Dissimilar
-
-	// 		// // then pixel xy;s bottom right corner is a meeting of 3 or 4 different colors
-	// 		// if (topLeftPixelHasAtLeastTwoDissimilars && atLeastOneOtherPixelHasAtLeastOneOtherDissimilar) {
-	// 		if (atLeastThreeDissimilars) {
-	// 			// if any of these four pixels have an inset corner, pop that corner back out
-	// 			replaceElement(voronoiVerts[x][y],     8,  9) 
-	// 			replaceElement(voronoiVerts[x+1][y],   12, 13) 
-	// 			replaceElement(voronoiVerts[x][y+1],   4,  5) 
-	// 			replaceElement(voronoiVerts[x+1][y+1], 0,  1) 
-	// 		}
-	// 	}
-	// }
+				if (atLeastThreeDissimilars) {
+					// if any of these four pixels have an inset corner, pop that corner back out
+					voronoiVerts[x][y]     = [...voronoiVerts[x][y]];
+					voronoiVerts[x+1][y]   = [...voronoiVerts[x+1][y]];
+					voronoiVerts[x][y+1]   = [...voronoiVerts[x][y+1]];
+					voronoiVerts[x+1][y+1] = [...voronoiVerts[x+1][y+1]];
+					replaceElement(voronoiVerts[x][y],     8,  9) 
+					replaceElement(voronoiVerts[x+1][y],   12, 13) 
+					replaceElement(voronoiVerts[x][y+1],   4,  5) 
+					replaceElement(voronoiVerts[x+1][y+1], 0,  1) 
+				}
+			}
+		}
+	}
 
 	// draw voronoi :)
 	var voronoiSVG = initSVG(pixelSize*imgWidth, pixelSize*imgHeight);
@@ -579,6 +651,18 @@ function init() {
 			}
 		}
 	}
+
+	tempConnections.forEach(([x, y, neightborIndex]) => {
+		console.log({x,y,neightborIndex})
+		var delta = deltas[neightborIndex]
+		var newX = x + delta[0]
+		var newY = y + delta[1]
+		makeLine(voronoiSVG, x*pixelSize+pixelSize/2, y*pixelSize+pixelSize/2, newX*pixelSize+pixelSize/2, newY*pixelSize+pixelSize/2, [255, 0, 0])
+	})
+
+	// revert temporary connections
+	tempConnections.forEach(([x, y, neightborIndex]) => similarityGraph[x][y][neightborIndex] = false)
+
 
 	//
 	// splines
@@ -702,91 +786,151 @@ function init() {
 						if (!edgeIsShared) continue
 					} catch { continue }
 
-					if (!adjacencyList[globalIndex0]) adjacencyList[globalIndex0] = [globalIndex1]
-					if (!adjacencyList[globalIndex1]) adjacencyList[globalIndex1] = [globalIndex0]
+					if (!adjacencyList[globalIndex0]) adjacencyList[globalIndex0] = []
+					if (!adjacencyList[globalIndex1]) adjacencyList[globalIndex1] = []
 
 					if (!adjacencyList[globalIndex0].includes(globalIndex1)) adjacencyList[globalIndex0].push(globalIndex1)
 					if (!adjacencyList[globalIndex1].includes(globalIndex0)) adjacencyList[globalIndex1].push(globalIndex0)
 				}
-
-
-				// // let's just define a list of edges for each neighbor
-				// for (var k = 0; k < possibleEdgesSharedWithNeighbor[i].length; k++) {
-				// 	var edge = possibleEdgesSharedWithNeighbor[i][k]
-				// 	//var edgeVerticesAbsolutePositions = edge.map(v => voronoiCellVertexPositions[v]).map(([dx, dy]) => [x+dx, y+dy])
-
-				// 	var edgeStartIndex = thisPixelVoronoiVerts.indexOf(edge[0])
-				// 	if (edgeStartIndex >= 0 && thisPixelVoronoiVerts[edgeStartIndex+1] === edge[1]) { // if this voronoi cell has the edge's first vertex and then the edges next vertex is adjacent, this cell has this edge
-				// 		var globalIndex0 = voronoiVertexIndex_to_globallyUniqueIndex[edge[0]](x, y)
-				// 		var globalIndex1 = voronoiVertexIndex_to_globallyUniqueIndex[edge[1]](x, y)
-
-				// 		if (!adjacencyList[globalIndex0]) adjacencyList[globalIndex0] = []
-				// 		if (!adjacencyList[globalIndex1]) adjacencyList[globalIndex1] = []
-
-				// 		if (!adjacencyList[globalIndex0].includes(globalIndex1)) adjacencyList[globalIndex0].push(globalIndex1)
-				// 		if (!adjacencyList[globalIndex1].includes(globalIndex0)) adjacencyList[globalIndex1].push(globalIndex0)
-				// 	}
-				// }
 			}
 		}
 	}
 
 	// for now the spline resolution is just "first come, first served"
+	// var splines = []
+	// var visited = {}
+	// var splinesByConstituents = {}
+	// var pointsToVisit = [...Object.keys(adjacencyList)]
+	// pointsToVisit.forEach(globalVoronoiVertexIndex => {
+	// 	//globalVoronoiVertexIndex = parseInt(globalVoronoiVertexIndex)
+	// 	if (visited[globalVoronoiVertexIndex]) return;
+	// 	var thisVisited = {}
+	// 	var spline = [globalVoronoiVertexIndex]
+
+	// 	var unsetVistedFor = []
+	// 	var current = globalVoronoiVertexIndex
+	// 	var reverse = false
+	// 	while (!visited[current]) {
+	// 		if (!current) break
+			
+	// 		visited[current] = true
+	// 		thisVisited[current] = true
+	// 		if (current != globalVoronoiVertexIndex)
+	// 		{
+	// 			if (!reverse) spline.push(current)
+	// 			else spline.unshift(current)
+	// 		}
+	// 		splinesByConstituents[current] = spline
+
+	// 		var prev = current
+
+	// 		// this is where the "3 partial splines meet" resolution should happen
+	// 		// if adjacencyList[current].length >= 3, we need to determine whether to end the spline now, OR which of the neighbors to continue the spline with
+	// 		var unvisitedNeighbors = adjacencyList[current].filter(index => !thisVisited[index])
+	// 		//if (unvisitedNeighbors.length >= 2) visited[current] = false; //unsetVistedFor.push(current)
+	// 		current = unvisitedNeighbors[0] // first come first served 
+	// 		//if (adjacencyList[prev].filter(index => (index != current && !visited[index]))) visited[prev] = false; // return to this point later on
+			
+	// 		if (visited[current]) {
+	// 			//attempt to join this spline and the spline that current was first visited by
+	// 			var shouldJoin = true  
+	// 			var shouldReverse = true;
+	// 			if (shouldJoin) { // this is also where "3 partial splines meet" resolution should happen. I think it's fine though, since the above place determines which two splines should go straight through. this place should just always be true 
+	// 				var otherSpline = splinesByConstituents[current]
+					
+	// 				if (otherSpline[otherSpline.length-1] == spline[0]) {
+	// 					otherSpline.concat(spline.slice(1, spline.length))
+	// 				} else if (otherSpline[otherSpline.length-1] == spline[spline.length-1]) {
+	// 					otherSpline.concat(spline.reverse().slice(1, spline.length))
+	// 					shouldReverse = false
+	// 				} else if (otherSpline[0] == spline[spline.length-1]) {
+	// 					spline.slice(0, spline.length-2).forEach(p => otherSpline.unshift(p))
+	// 				} else if (otherSpline[0] == spline[0]) {
+	// 					spline.slice(1, spline.length-1).reverse().forEach(p => otherSpline.unshift(p))
+	// 					shouldReverse = false
+	// 				} else {
+	// 					spline.push(current) // this spline hit somewhere in the middle of another spline. it's impossible to join these two splines into one, so just add this last point before finishing this spline
+	// 					shouldJoin = false
+	// 				}
+
+	// 				if (shouldJoin) { // if we really should merge the two
+	// 					spline.forEach(point => splinesByConstituents[point] = otherSpline)
+	// 					spline = otherSpline
+	// 				}
+
+	// 			} else {
+	// 				spline.push(current) // we're not end-to-end joining these two splines, but our current spline still needs to end at this vertex
+	// 			}
+
+	// 			// check to see if there's more to explore
+	// 			var unvisitedNeighbors_ofTheStartPoint = adjacencyList[globalVoronoiVertexIndex].filter(index => !thisVisited[index])
+	// 			if (unvisitedNeighbors_ofTheStartPoint.length != 0) {
+	// 				current = globalVoronoiVertexIndex
+	// 				reverse = shouldReverse
+	// 				continue
+	// 			}
+
+	// 			return; // we've run up against another spline segment, and it's already gone as far as it can, so there's nothing else to add from here
+	// 		}
+
+	// 		var backToStart = adjacencyList[prev].filter(index => index === spline[0])[0]
+	// 		if (spline.length > 2 && backToStart != undefined) //(current == undefined) 
+	// 		{
+	// 			// if all neighbors have been visited, maybe one of the neighbors is the start node, and this edge is trying to be the end of a closed loop?
+	// 			var backToStart = adjacencyList[prev].filter(index => index === spline[0])[0]
+	// 			if (backToStart) spline.push(backToStart)
+	// 			break
+	// 		}
+	// 	}
+
+	// 	//unsetVistedFor.forEach(p => visited[p] = false)
+
+	// 	//if (spline.length <= 1) return;
+
+	// 	splines.push(spline)
+	// });
+
+	//console.log(Object.keys(adjacencyList).filter(point => !visited[point]))
+
 	var splines = []
+	var valence3Nodes = Object.keys(adjacencyList).filter(point => adjacencyList[point].length >= 3)
+	var valence2Nodes = Object.keys(adjacencyList).filter(point => adjacencyList[point].length < 3)
 	var visited = {}
-	var splinesByConstituents = {}
-	Object.keys(adjacencyList).forEach(globalVoronoiVertexIndex => {
-		//globalVoronoiVertexIndex = parseInt(globalVoronoiVertexIndex)
-		if (visited[globalVoronoiVertexIndex]) return;
-		var thisVisited = {}
-		var spline = []
+	valence2Nodes.forEach(point => {
+		if (visited[point]) return
 
-		var current = globalVoronoiVertexIndex
-		while (!visited[current]) {
-			if (!current) break
-			
-			visited[current] = true
-			thisVisited[current] = true
-			spline.push(current)
-			splinesByConstituents[current] = spline
+		console.log("in")
 
-			var prev = current
-
-			current = adjacencyList[current].filter(index => !thisVisited[index])[0] // first come first served
-			
-			if (visited[current]) {
-				//attempt to join this spline and the spline that current was first visited by
-				var shouldJoin = true  // this is where the "3 partial splines meet" resolution should happen
-				if (shouldJoin) {
-					var otherSpline = splinesByConstituents[current]
-
-					if (otherSpline[otherSpline.length-1] == spline[0]) {
-						otherSpline.concat(spline.slice(1, spline.length))
-					} else if (otherSpline[otherSpline.length-1] == spline[spline.length-1]) {
-						otherSpline.concat(spline.reverse().slice(1, spline.length))
-					} else if (otherSpline[0] == spline[spline.length-1]) {
-						spline.slice(0, spline.length-2).forEach(p => otherSpline.unshift(p))
-					} else if (otherSpline[0] == spline[0]) {
-						spline.slice(1, spline.length-1).reverse().forEach(p => otherSpline.unshift(p))
-					}
-
-					return; // we've run up against another spline segment, and it's already gone as far as it can, so there's nothing else to add from here
-				}
-			}
-
-			if (current == undefined) 
-			{
-				// if all neighbors have been visited, maybe one of the neighbors is the start node, and this edge is trying to be the end of a closed loop?
-				var backToStart = adjacencyList[prev].filter(index => index === spline[0])[0]
-				if (backToStart) spline.push(backToStart)
-			}
+		// step 1: look forward until a valence1 node is found (straight line) or until point is found again (closed loop)
+		var current = point
+		var prev = point
+		while (adjacencyList[current].length === 2) {
+			var next = adjacencyList[current].filter(neighborPoint => neighborPoint != prev && adjacencyList[neighborPoint].length <= 2)[0] // only consider valence 2 neighbors that aren't the current
+			prev = current
+			current = next
+			if (current == point) break; // we've looped back to the start, only hitting valence 2 nodes along the way - this is a simple closed loop
 		}
 
-		if (spline.length <= 2) return;
+		console.log("out")
+
+		// step 2: grow this spline starting from the new start point (current)
+		var spline = []
+		while(current != undefined) {
+			visited[current] = true; // mark this point as belonging to a spline
+			spline.push(current)
+			current = adjacencyList[current].filter(neighborPoint => neighborPoint === point || !visited[neighborPoint])[0]
+			if (current === point) { spline.push(point); break; } // close the looped spline and then break
+		}
+		
+		console.log("done")
 
 		splines.push(spline)
-	});
+	})
 
+	// step 3: deal with all the valence3 nodes
+	valence3Nodes.forEach(point => {
+		console.log(`I don't know what to do with point ${point}`)
+	})
 	
 	// draw splines approximation (SVG)
 	// this will help me see if the splines were generated correctly
@@ -797,8 +941,8 @@ function init() {
 		var point = globallyUniqueIndex_to_absoluteXY(globalPointIndex).map(x_or_y => pixelSize*x_or_y)
 		var points = adjacencyList[globalPointIndex].map(i => globallyUniqueIndex_to_absoluteXY(i).map(x_or_y => pixelSize*x_or_y))
 		for(var i = 0; i < points.length; i++) {
-				var color = [Math.floor(Math.random()*150)+50, Math.floor(Math.random()*150)+50, Math.floor(Math.random()*150)+50]
-				makeLine(splinesSvg, ...point, ...points[i], color)
+			var color = [Math.floor(Math.random()*150)+50, Math.floor(Math.random()*150)+50, Math.floor(Math.random()*150)+50]
+			makeLine(splinesSvg, ...point, ...points[i], color)
 		}
 	})
 	
@@ -807,6 +951,7 @@ function init() {
 		var color = [Math.floor(Math.random()*150)+50, Math.floor(Math.random()*150)+50, Math.floor(Math.random()*150)+50]
 		var points = splinePointIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i).map(x_or_y => pixelSize*x_or_y))
 		for(var i = 0; i < points.length-1; i++) {
+			//makeSquare(splinesSvg, ...points[i], pixelSize/3, color)
 			makeLine(splinesSvg, ...points[i], ...points[i+1]) //, color)
 		}
 	})
@@ -815,122 +960,89 @@ function init() {
 	var splinesCanvas = document.createElement('canvas');
 	imgWidth = splinesCanvas.width = imgWidth*pixelSize;
 	imgHeight = splinesCanvas.height = imgHeight*pixelSize;
-	console.log(`${imgHeight*pixelSize} x ${imgWidth*pixelSize}`)
 	document.body.appendChild(splinesCanvas);
-
-	// function from https://github.com/Tagussan/BSpline/blob/master/main.js
-	function drawSpline(pts, ctx, canv, degree){
-		console.log(pts)
-
-		//ctx.clearRect(0,0,canv.width,canv.height);
-		if(pts.length == 0) {
-			return;
-		}
-		for(var i = 0;i<pts.length;i++){
-			ctx.fillStyle = "rgba(0,255,0,1)";
-			ctx.beginPath();
-			ctx.arc(pts[i][0],pts[i][1],5,0,Math.PI*2,false);
-			ctx.fill();
-			ctx.closePath();   
-		}
-		var spline = new BSpline(degree, pts) //new BSpline(pts,degree,true);
-		ctx.beginPath();
-		var oldx,oldy,x,y;
-		oldx = spline.evaluate(0)[0];
-		oldy = spline.evaluate(0)[1];
-		for(var t = 0;t <= 1;t+=0.001){
-			ctx.moveTo(oldx,oldy);
-			var interpol = spline.evaluate(t)//calcAt(t);
-			x = interpol[0];
-			y = interpol[1];
-			ctx.lineTo(x,y);
-			oldx = x;
-			oldy = y;
-		}
-		ctx.stroke();
-		ctx.closePath();
-	}
 
 	splines.forEach(splinePointIndexes => {
 		var absolutePoints = splinePointIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i))
 		var absolutePoints_scaled = absolutePoints.map(point => [pixelSize*point[0], pixelSize*point[1]])
-		drawSpline(absolutePoints_scaled, splinesCanvas.getContext('2d'), splinesCanvas, 2)
+		
+		const splineObject = new ClampedClosedBSpline(4, absolutePoints_scaled)
+		splineObject.drawToCanvas(splinesCanvas.getContext('2d'))
 	})
 
+	return;
 	
 	//
 	// smoothen splines
 	//
 
 
+	const POSITOINAL_ENERGY_WEIGHT = 1
+	const MAX_RANDOM_OFFSET = 0.05
+	const CURVATURE_INTEGRAL_INTERVALS_PER_SPAN = 20
+	const NUM_OPTOMIZATION_GUESSES_PER_POINT = 20
+	const SPLINE_DEGREE = 4 // must be at least 3
 
+	const splineObjects = splines.map(splinePointIndexes => {
+		var absolutePoints = splinePointIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i))
+		var absolutePoints_scaled = absolutePoints.map(point => [pixelSize*point[0], pixelSize*point[1]])
+		return new ClampedClosedBSpline(SPLINE_DEGREE, absolutePoints_scaled)
+	})
 
+	function energyCurvature(spline, index) {
+		return spline.IntegrateCurvature(index, CURVATURE_INTEGRAL_INTERVALS_PER_SPAN)
+	}
 
-	// const POSITOINAL_ENERGY_WEIGHT = 1
-	// const MAX_RANDOM_OFFSET = 0.05
+	function energyPosition(originalPoint, point) {
+		return [Math.pow(Math.abs(point[0]-originalPoint[0]), 4), 
+				Math.pow(Math.abs(point[1]-originalPoint[1]), 4)]
+	}
 
-	// const splineObjects = splines.map(splinePoints => Curve2Closed_BSpline(splinePoints))
+	function pointEnergy(spline, index, originalPoint) {
+		return energyCurvature(spline, index) + 
+			POSITOINAL_ENERGY_WEIGHT*energyPosition(originalPoint, index)
+	}
 
-	// var ctx = splinesCanvas.getContext('2d')
-	// splineObjects.forEach(splineObject => {
-	// 	ctx.beginPath();
-	// 	var oldx,oldy,x,y;
-	// 	oldx = spline.__call__(0)[0];
-	// 	oldy = spline.__call__(0)[1];
-	// 	for(var t = 0;t <= 1;t+=0.001){
-	// 		ctx.moveTo(oldx,oldy);
-	// 		var interpol = splineObject.__call__(t);
-	// 		x = interpol[0];
-	// 		y = interpol[1];
-	// 		ctx.lineTo(x,y);
-	// 		oldx = x;
-	// 		oldy = y;
-	// 	}
-	// 	ctx.stroke();
-	// 	ctx.closePath();
-	// })
+	function randomPointOffset(point) {
+		var r = Math.random()*MAX_RANDOM_OFFSET
+		var a = Math.random()*2*Math.PI
+		return [r*Math.cos(a)+point[0],
+				r*Math.sin(a)+point[1]]
+	}
 
-	// function energyCurvature(spline, index) {
-	// 	// hopefully the transpiled code will work
-	// 	return spline.Energy_C(index, 20)
-	// }
+	splineObjects.forEach(splineObject => {
+		splineObject.points.forEach((point, index) => {
+			//# The function which is used to optimize the position of a point
+			const start = [...splineObject.points[index]]
+			const energies = []
+			energies.push([, start])
+			var bestEnergy = pointEnergy(splineObject, index, start)
+			var bestEnergy_point = start
 
-	// function energyPosition(originalPoint, point) {
-	// 	return [Math.pow(Math.abs(point[0]-originalPoint[0]), 4), 
-	// 			Math.pow(Math.abs(point[1]-originalPoint[1]), 4)]
-	// }
+			for(var i = 0; i < NUM_OPTOMIZATION_GUESSES_PER_POINT; i++) { // Around 20 guesses are made and the minimum energy one is chosen
+				point = randomPointOffset(start)
+				splineObject.points[index] = point
+				const thisEnergy = pointEnergy(splineObject, index, start)
+				if (thisEnergy < bestEnergy) {
+					bestEnergy = thisEnergy
+					bestEnergy_point = point
+				}
+			}
 
-	// function randomPointOffset(point) {
-	// 	var r = Math.random()*MAX_RANDOM_OFFSET
-	// }
+			splineObject.points[index] = point
+		})
+	})
 
-	// splineObjects.forEach(splineObject => {
-	// 	splineObject.points.forEach((point, index) => {
-			
-	// 		// def point_energy(self, index):
-	// 		// 	# Total energy of a point = energy_curvature + energy_positional
-	// 		// 	E1 = self.E_C(index)
-	// 		// 	E2 = self.E_P(index)
-	// 		// 	return E1 + E2
-		
-	// 		// def rand(self):
-	// 		// 	# A random offset generator
-	// 		// 	offset = random.random() * self.GUESS_OFFSET
-	// 		// 	angle = random.random() * 2 * pi
-	// 		// 	return offset * Point((cos(angle), sin(angle)))
-		
-	// 		// def smooth_point(self, index, start):
-	// 		// 	# The function which is used to optimize the position of a point
-	// 		// 	energies = [(self.point_energy(index), start)]
-	// 		// 	for _ in range(
-	// 		// 		self.POINT_GUESSES
-	// 		// 	):  # Around 20 guesses are made and the minimum energy one is chosen
-	// 		// 		point = start + self.rand()
-	// 		// 		self.spline.Move(index, point)
-	// 		// 		energies.append((self.point_energy(index), point))
-	// 		// 	self.spline.Move(index, min(energies)[1])  # Move the spline appropriately
-	// 	})
-	// })
+	
+	// draw smoothened splines
+	var smoothedSplinesCanvas = document.createElement('canvas');
+	imgWidth = smoothedSplinesCanvas.width = imgWidth*pixelSize;
+	imgHeight = smoothedSplinesCanvas.height = imgHeight*pixelSize;
+	document.body.appendChild(smoothedSplinesCanvas);
+
+	splineObjects.forEach(splineObject => {
+		splineObject.drawToCanvas(smoothedSplinesCanvas.getContext('2d'))
+	})
 }
 
 //window.onload = preinit;
