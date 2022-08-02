@@ -811,14 +811,14 @@ function init() {
 			ctx.fill();
 			ctx.closePath();   
 		}
-		var spline = new BSpline(pts,degree,true);
+		var spline = new BSpline(degree, pts) //new BSpline(pts,degree,true);
 		ctx.beginPath();
 		var oldx,oldy,x,y;
-		oldx = spline.calcAt(0)[0];
-		oldy = spline.calcAt(0)[1];
+		oldx = spline.evaluate(0)[0];
+		oldy = spline.evaluate(0)[1];
 		for(var t = 0;t <= 1;t+=0.001){
 			ctx.moveTo(oldx,oldy);
-			var interpol = spline.calcAt(t);
+			var interpol = spline.evaluate(t)//calcAt(t);
 			x = interpol[0];
 			y = interpol[1];
 			ctx.lineTo(x,y);
@@ -861,16 +861,75 @@ function init() {
 	// smoothen splines
 	//
 
-	const POSITOINAL_ENERGY_WEIGHT = 1
 
-	function energyCurvature(points, index) {
-		// hopefully the transpiled code will work
-	}
 
-	function energyPosition(originalPoint, point) {
-		return [Math.pow(Math.abs(point[0]-originalPoint[0]), 4), 
-				Math.pow(Math.abs(point[1]-originalPoint[1]), 4)]
-	}
+
+
+	// const POSITOINAL_ENERGY_WEIGHT = 1
+	// const MAX_RANDOM_OFFSET = 0.05
+
+	// const splineObjects = splines.map(splinePoints => Curve2Closed_BSpline(splinePoints))
+
+	// var ctx = splinesCanvas.getContext('2d')
+	// splineObjects.forEach(splineObject => {
+	// 	ctx.beginPath();
+	// 	var oldx,oldy,x,y;
+	// 	oldx = spline.__call__(0)[0];
+	// 	oldy = spline.__call__(0)[1];
+	// 	for(var t = 0;t <= 1;t+=0.001){
+	// 		ctx.moveTo(oldx,oldy);
+	// 		var interpol = splineObject.__call__(t);
+	// 		x = interpol[0];
+	// 		y = interpol[1];
+	// 		ctx.lineTo(x,y);
+	// 		oldx = x;
+	// 		oldy = y;
+	// 	}
+	// 	ctx.stroke();
+	// 	ctx.closePath();
+	// })
+
+	// function energyCurvature(spline, index) {
+	// 	// hopefully the transpiled code will work
+	// 	return spline.Energy_C(index, 20)
+	// }
+
+	// function energyPosition(originalPoint, point) {
+	// 	return [Math.pow(Math.abs(point[0]-originalPoint[0]), 4), 
+	// 			Math.pow(Math.abs(point[1]-originalPoint[1]), 4)]
+	// }
+
+	// function randomPointOffset(point) {
+	// 	var r = Math.random()*MAX_RANDOM_OFFSET
+	// }
+
+	// splineObjects.forEach(splineObject => {
+	// 	splineObject.points.forEach((point, index) => {
+			
+	// 		// def point_energy(self, index):
+	// 		// 	# Total energy of a point = energy_curvature + energy_positional
+	// 		// 	E1 = self.E_C(index)
+	// 		// 	E2 = self.E_P(index)
+	// 		// 	return E1 + E2
+		
+	// 		// def rand(self):
+	// 		// 	# A random offset generator
+	// 		// 	offset = random.random() * self.GUESS_OFFSET
+	// 		// 	angle = random.random() * 2 * pi
+	// 		// 	return offset * Point((cos(angle), sin(angle)))
+		
+	// 		// def smooth_point(self, index, start):
+	// 		// 	# The function which is used to optimize the position of a point
+	// 		// 	energies = [(self.point_energy(index), start)]
+	// 		// 	for _ in range(
+	// 		// 		self.POINT_GUESSES
+	// 		// 	):  # Around 20 guesses are made and the minimum energy one is chosen
+	// 		// 		point = start + self.rand()
+	// 		// 		self.spline.Move(index, point)
+	// 		// 		energies.append((self.point_energy(index), point))
+	// 		// 	self.spline.Move(index, min(energies)[1])  # Move the spline appropriately
+	// 	})
+	// })
 }
 
 //window.onload = preinit;
