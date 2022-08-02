@@ -787,9 +787,31 @@ function init() {
 		splines.push(spline)
 	});
 
+	
+	// draw splines approximation (SVG)
+	// this will help me see if the splines were generated correctly
+	var splinesSvg = initSVG(pixelSize*imgWidth, pixelSize*imgHeight);
+	
+	// draw all adjacencies (this highlights edges that were missed when building splines)
+	Object.keys(adjacencyList).forEach(globalPointIndex => {
+		var point = globallyUniqueIndex_to_absoluteXY(globalPointIndex).map(x_or_y => pixelSize*x_or_y)
+		var points = adjacencyList[globalPointIndex].map(i => globallyUniqueIndex_to_absoluteXY(i).map(x_or_y => pixelSize*x_or_y))
+		for(var i = 0; i < points.length; i++) {
+				var color = [Math.floor(Math.random()*150)+50, Math.floor(Math.random()*150)+50, Math.floor(Math.random()*150)+50]
+				makeLine(splinesSvg, ...point, ...points[i], color)
+		}
+	})
+	
+	// draw splines approximation
+	splines.forEach(splinePointIndexes => {
+		var color = [Math.floor(Math.random()*150)+50, Math.floor(Math.random()*150)+50, Math.floor(Math.random()*150)+50]
+		var points = splinePointIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i).map(x_or_y => pixelSize*x_or_y))
+		for(var i = 0; i < points.length-1; i++) {
+			makeLine(splinesSvg, ...points[i], ...points[i+1]) //, color)
+		}
+	})
 
 	// draw splines
-	// uses the Tangussan implementation
 	var splinesCanvas = document.createElement('canvas');
 	imgWidth = splinesCanvas.width = imgWidth*pixelSize;
 	imgHeight = splinesCanvas.height = imgHeight*pixelSize;
@@ -835,27 +857,6 @@ function init() {
 		drawSpline(absolutePoints_scaled, splinesCanvas.getContext('2d'), splinesCanvas, 2)
 	})
 
-	// draw splines approximation (SVG)
-	var splinesSvg = initSVG(pixelSize*imgWidth, pixelSize*imgHeight);
-	
-	// draw all adjacencies (this highlights edges that were missed when building splines)
-	Object.keys(adjacencyList).forEach(globalPointIndex => {
-		var point = globallyUniqueIndex_to_absoluteXY(globalPointIndex).map(x_or_y => pixelSize*x_or_y)
-		var points = adjacencyList[globalPointIndex].map(i => globallyUniqueIndex_to_absoluteXY(i).map(x_or_y => pixelSize*x_or_y))
-		for(var i = 0; i < points.length; i++) {
-				var color = [Math.floor(Math.random()*150)+50, Math.floor(Math.random()*150)+50, Math.floor(Math.random()*150)+50]
-				makeLine(splinesSvg, ...point, ...points[i], color)
-		}
-	})
-	
-	// draw splines approximation
-	splines.forEach(splinePointIndexes => {
-		var color = [Math.floor(Math.random()*150)+50, Math.floor(Math.random()*150)+50, Math.floor(Math.random()*150)+50]
-		var points = splinePointIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i).map(x_or_y => pixelSize*x_or_y))
-		for(var i = 0; i < points.length-1; i++) {
-			makeLine(splinesSvg, ...points[i], ...points[i+1]) //, color)
-		}
-	})
 	
 	//
 	// smoothen splines
