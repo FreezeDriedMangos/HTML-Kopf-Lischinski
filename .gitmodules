@@ -1,3 +1,6 @@
 [submodule "lib/BSpline"]
 	path = lib/BSpline
 	url = git@github.com:Tagussan/BSpline.git
+[submodule "lib/b-spline"]
+	path = lib/b-spline
+	url = https://github.com/thibauts/b-spline
