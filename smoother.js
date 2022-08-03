@@ -1100,13 +1100,13 @@ function init() {
 
 				// get the point given by the line of best fit
 				const lineFit = findLineByLeastSquares(neighbors.map(p => p[0]), neighbors.map(p=>p[1]))
-				const lineFitPoint = [lineFit[0], lineFit[1]]
+				const lineFitPoint = [lineFit[0][0], lineFit[1][0]]
 
 				// get the point given by the circle of best fit
 				CIRCLEFIT.resetPoints()
 				neighbors.forEach(neighborPoint => CIRCLEFIT.addPoint(...neighborPoint))
 				const circleFit = CIRCLEFIT.compute()
-				const circleFitPoint = circleFit.success ? circleFit.projections[0] : originalPoint
+				const circleFitPoint = circleFit.success ? [circleFit.projections[0].x, circleFit.projections[0].y] : originalPoint
 
 				// calculate the average of these points, taking into account the weight given to the original point
 				const influences = []
@@ -1114,11 +1114,12 @@ function init() {
 				influences.push(lineFitPoint)
 				influences.push(circleFitPoint)
 
+				console.log(influences)
 				const newPoint = average(influences)
 				absoluteSpline[index] = newPoint
 			})
 		}
-
+		console.log(absoluteSpline)
 		absoluteSplines.push(absoluteSpline)
 	})
 
