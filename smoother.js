@@ -585,7 +585,7 @@ function init() {
 	}
 
 	// fix corners where 3 or 4 dissimilar colors meet
-	const HEAL_3_COLOR_MEETINGS = false; // TODO: alternate healing where only certain patterns are changed, and they're changed according to their neighbors
+	const HEAL_3_COLOR_MEETINGS = true; // TODO: alternate healing where only certain patterns are changed, and they're changed according to their neighbors
 	// better healing: pick one of the four involved corners to explode
 	// pick the corner with the fewest connections, breaking ties by the angle (eg an acute angle beats a right angle beats a straight line) (11 beats 101/0101 beats 1001 beats 10001)
 	// then, on the exploding corner, find the vertex not shared by any of the four involved pixels. mark this index.
@@ -753,9 +753,6 @@ function init() {
 	// then, once I have the adjacency list, any key that has a list of length 3 or more is a place where at least two splines meet. I can resolve these directly in the adjacency list
 	// I can iterate over each point in the list, building the splines from there
 
-
-	// TODO: bug - all cells are saying that their voronoiVertex 1 is connected to their neighbor [x][y+1] 's voronoi vertex 1
-
 	var adjacencyList = {}
 	for (var x = 0; x < imgWidth; x++) {	
 		for (var y = 0; y < imgHeight; y++) {
@@ -796,140 +793,94 @@ function init() {
 		}
 	}
 
-	// for now the spline resolution is just "first come, first served"
-	// var splines = []
-	// var visited = {}
-	// var splinesByConstituents = {}
-	// var pointsToVisit = [...Object.keys(adjacencyList)]
-	// pointsToVisit.forEach(globalVoronoiVertexIndex => {
-	// 	//globalVoronoiVertexIndex = parseInt(globalVoronoiVertexIndex)
-	// 	if (visited[globalVoronoiVertexIndex]) return;
-	// 	var thisVisited = {}
-	// 	var spline = [globalVoronoiVertexIndex]
-
-	// 	var unsetVistedFor = []
-	// 	var current = globalVoronoiVertexIndex
-	// 	var reverse = false
-	// 	while (!visited[current]) {
-	// 		if (!current) break
-			
-	// 		visited[current] = true
-	// 		thisVisited[current] = true
-	// 		if (current != globalVoronoiVertexIndex)
-	// 		{
-	// 			if (!reverse) spline.push(current)
-	// 			else spline.unshift(current)
-	// 		}
-	// 		splinesByConstituents[current] = spline
-
-	// 		var prev = current
-
-	// 		// this is where the "3 partial splines meet" resolution should happen
-	// 		// if adjacencyList[current].length >= 3, we need to determine whether to end the spline now, OR which of the neighbors to continue the spline with
-	// 		var unvisitedNeighbors = adjacencyList[current].filter(index => !thisVisited[index])
-	// 		//if (unvisitedNeighbors.length >= 2) visited[current] = false; //unsetVistedFor.push(current)
-	// 		current = unvisitedNeighbors[0] // first come first served 
-	// 		//if (adjacencyList[prev].filter(index => (index != current && !visited[index]))) visited[prev] = false; // return to this point later on
-			
-	// 		if (visited[current]) {
-	// 			//attempt to join this spline and the spline that current was first visited by
-	// 			var shouldJoin = true  
-	// 			var shouldReverse = true;
-	// 			if (shouldJoin) { // this is also where "3 partial splines meet" resolution should happen. I think it's fine though, since the above place determines which two splines should go straight through. this place should just always be true 
-	// 				var otherSpline = splinesByConstituents[current]
-					
-	// 				if (otherSpline[otherSpline.length-1] == spline[0]) {
-	// 					otherSpline.concat(spline.slice(1, spline.length))
-	// 				} else if (otherSpline[otherSpline.length-1] == spline[spline.length-1]) {
-	// 					otherSpline.concat(spline.reverse().slice(1, spline.length))
-	// 					shouldReverse = false
-	// 				} else if (otherSpline[0] == spline[spline.length-1]) {
-	// 					spline.slice(0, spline.length-2).forEach(p => otherSpline.unshift(p))
-	// 				} else if (otherSpline[0] == spline[0]) {
-	// 					spline.slice(1, spline.length-1).reverse().forEach(p => otherSpline.unshift(p))
-	// 					shouldReverse = false
-	// 				} else {
-	// 					spline.push(current) // this spline hit somewhere in the middle of another spline. it's impossible to join these two splines into one, so just add this last point before finishing this spline
-	// 					shouldJoin = false
-	// 				}
-
-	// 				if (shouldJoin) { // if we really should merge the two
-	// 					spline.forEach(point => splinesByConstituents[point] = otherSpline)
-	// 					spline = otherSpline
-	// 				}
-
-	// 			} else {
-	// 				spline.push(current) // we're not end-to-end joining these two splines, but our current spline still needs to end at this vertex
-	// 			}
-
-	// 			// check to see if there's more to explore
-	// 			var unvisitedNeighbors_ofTheStartPoint = adjacencyList[globalVoronoiVertexIndex].filter(index => !thisVisited[index])
-	// 			if (unvisitedNeighbors_ofTheStartPoint.length != 0) {
-	// 				current = globalVoronoiVertexIndex
-	// 				reverse = shouldReverse
-	// 				continue
-	// 			}
-
-	// 			return; // we've run up against another spline segment, and it's already gone as far as it can, so there's nothing else to add from here
-	// 		}
-
-	// 		var backToStart = adjacencyList[prev].filter(index => index === spline[0])[0]
-	// 		if (spline.length > 2 && backToStart != undefined) //(current == undefined) 
-	// 		{
-	// 			// if all neighbors have been visited, maybe one of the neighbors is the start node, and this edge is trying to be the end of a closed loop?
-	// 			var backToStart = adjacencyList[prev].filter(index => index === spline[0])[0]
-	// 			if (backToStart) spline.push(backToStart)
-	// 			break
-	// 		}
-	// 	}
-
-	// 	//unsetVistedFor.forEach(p => visited[p] = false)
-
-	// 	//if (spline.length <= 1) return;
-
-	// 	splines.push(spline)
-	// });
-
-	//console.log(Object.keys(adjacencyList).filter(point => !visited[point]))
-
 	var splines = []
 	var valence3Nodes = Object.keys(adjacencyList).filter(point => adjacencyList[point].length >= 3)
 	var valence2Nodes = Object.keys(adjacencyList).filter(point => adjacencyList[point].length < 3)
-	var visited = {}
+	var splinesByConstituents = {}
 	valence2Nodes.forEach(point => {
-		if (visited[point]) return
-
-		console.log("in")
+		if (splinesByConstituents[point]) return // this point has already been visited and added to a spline
 
 		// step 1: look forward until a valence1 node is found (straight line) or until point is found again (closed loop)
 		var current = point
 		var prev = point
 		while (adjacencyList[current].length === 2) {
 			var next = adjacencyList[current].filter(neighborPoint => neighborPoint != prev && adjacencyList[neighborPoint].length <= 2)[0] // only consider valence 2 neighbors that aren't the current
+			if (next == undefined) break; // we've hit a valence 2 node whose only neighbors are current and a valence 3-4 node, so this is the end of the line
 			prev = current
 			current = next
 			if (current == point) break; // we've looped back to the start, only hitting valence 2 nodes along the way - this is a simple closed loop
 		}
 
-		console.log("out")
+		const loopStart = current
 
 		// step 2: grow this spline starting from the new start point (current)
 		var spline = []
+		prev = current
 		while(current != undefined) {
-			visited[current] = true; // mark this point as belonging to a spline
+			splinesByConstituents[current] = spline; // mark this point as belonging to a spline
 			spline.push(current)
-			current = adjacencyList[current].filter(neighborPoint => neighborPoint === point || !visited[neighborPoint])[0]
-			if (current === point) { spline.push(point); break; } // close the looped spline and then break
+			var next = adjacencyList[current].filter(neighborPoint => neighborPoint != prev && adjacencyList[neighborPoint].length <= 2)[0]
+			prev = current
+			current = next
+			if (current === loopStart) { spline.push(point); break; } // close the looped spline and then break
 		}
 		
-		console.log("done")
 
 		splines.push(spline)
 	})
 
 	// step 3: deal with all the valence3 nodes
 	valence3Nodes.forEach(point => {
-		console.log(`I don't know what to do with point ${point}`)
+		// this is where 3 spline meetings are resolved
+		// for now, I'll just resolve them randomly
+		var allConnectedSplines = adjacencyList[point].map(neighborPoint => splinesByConstituents[neighborPoint])
+		var joinSpline0 = splinesByConstituents[adjacencyList[point][0]]
+		var joinSpline1 = splinesByConstituents[adjacencyList[point][1]]
+		var terminateSplines = adjacencyList[point]
+			.slice(2, adjacencyList[point].length)
+			.map(neighborPoint => splinesByConstituents[neighborPoint])
+
+
+		console.log(terminateSplines.length)
+		allConnectedSplines.forEach(spline => {
+			console.log(spline)
+			if (adjacencyList[point].includes(spline[0])) spline.unshift(point) // this point is adjacent to the start of the spline
+			else if (adjacencyList[point].includes(spline[spline.length-1])) spline.push(point) // this point is adjacent to the end of the spline
+			else { console.error("attempted to add a point to a non-adjacent spline"); console.log(adjacencyList[point]); console.log(spline) }
+		})
+
+		if (joinSpline0 == joinSpline1) {
+			// we made a loop that contained at least 1 valence3orGreater node
+			joinSpline0.unshift(point)
+			joinSpline0.push(point)
+			return
+		}
+
+		var newSpline = []
+		if (joinSpline0[0] == joinSpline1[0]) {
+			//joinSpline1.slice(1, joinSpline1.length).forEach(p => joinSpline0.unshift(p))
+			newSpline = [...joinSpline0, ...joinSpline1.slice(1, joinSpline1.length).reverse()]
+
+		} else if (joinSpline0[0] == joinSpline1[joinSpline1.length-1]) {
+			//joinSpline1.reverse().slice(1, joinSpline1.length).forEach(p => joinSpline0.unshift(p))
+			newSpline = [...joinSpline1, ...joinSpline0.slice(1, joinSpline0.length)]
+
+		} else if (joinSpline0[joinSpline0.length-1] == joinSpline1[0]) {
+			//joinSpline1.slice(1, joinSpline1.length).forEach(p => joinSpline0.push(p))
+			newSpline = [...joinSpline0, ...joinSpline1.slice(1, joinSpline1.length)]
+
+		} else if (joinSpline0[joinSpline0.length-1] == joinSpline1[joinSpline1.length-1]) {
+			//joinSpline1.reverse().slice(1, joinSpline1.length).forEach(p => joinSpline0.push(p))
+			newSpline = [...joinSpline0, ...joinSpline1.reverse().slice(1, joinSpline1.length)]
+		}
+
+		// we dissolved the old splines, so we need to update everywhere it's referenced
+		joinSpline0.forEach(constituent => splinesByConstituents[constituent] = newSpline)
+		splines.splice(splines.indexOf(joinSpline0), 1) // js arrays have no remove function, so I gotta do this
+		joinSpline1.forEach(constituent => splinesByConstituents[constituent] = newSpline)
+		splines.splice(splines.indexOf(joinSpline1), 1) // js arrays have no remove function, so I gotta do this
+
+		splines.push(newSpline)
 	})
 	
 	// draw splines approximation (SVG)
