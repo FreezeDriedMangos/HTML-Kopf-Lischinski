@@ -4,3 +4,6 @@
 [submodule "lib/b-spline"]
 	path = lib/b-spline
 	url = https://github.com/thibauts/b-spline
+[submodule "lib/circle-fit"]
+	path = lib/circle-fit
+	url = git@github.com:Meakk/circle-fit.git
