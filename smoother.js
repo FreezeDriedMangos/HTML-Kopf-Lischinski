@@ -92,6 +92,16 @@ function init() {
 		var dv = Math.abs(yuv1[2]-yuv2[2]) > 6 ;
 		return dy || du || dv;	
 	}
+	
+	function veryDissimilarColors(yuv1, yuv2) {
+		if (yuv1[3] !== undefined || yuv2[3] !== undefined) // if they have alpha components
+			if ((yuv1[3] === 0) !== (yuv2[3] === 0)) return true; // if one is completely transparent and the other is not, the pixels are automatically considered dissimilar
+
+		var dy = Math.abs(yuv1[0]-yuv2[0]) > 100;
+		var du = Math.abs(yuv1[1]-yuv2[1]) > 100;
+		var dv = Math.abs(yuv1[2]-yuv2[2]) > 100;
+		return dy || du || dv;	
+	}
 
 	//
 	// SVG functions
@@ -680,13 +690,6 @@ function init() {
 	var nextNeighbors = [3, 4, 5, 6]
 	var previousNeighbors = [7, 0, 1, 2]
 
-	// var possibleEdgesSharedWithNeighbor = {
-	// 	3: [ [5,4], [5,8], [5,9], [5,7], [4,7], [4,8], [4,9], [6,7], [6,8], [6,9], [8,9], ],
-	// 	4: [ [7,10], /*[7,9],*/ [9,10], [6,8], [8,11] ],
-	// }
-	// possibleEdgesSharedWithNeighbor[5] = possibleEdgesSharedWithNeighbor[3].map(edge => voronoiVertsTransform_90deg(voronoiVertsTransform_90deg(voronoiVertsTransform_90deg((edge)))))
-	// possibleEdgesSharedWithNeighbor[6] = possibleEdgesSharedWithNeighbor[4].map(edge => voronoiVertsTransform_90deg(edge))
-
 	// new strategy: make a voronoiVertexIndex but for the whole pixel grid
 	// so basically, assign a unique number to every point on the entire pixel grid that can be a valid voronoi vertex
 	// then, in the for loop below, create an adjacency list of these
@@ -705,11 +708,11 @@ function init() {
 	// ...
 
 	const voronoiVertexIndex_to_globallyUniqueIndex = {
-		1: (x, y) =>  `${x},${y},1`, //(y*(imgWidth+1)+x)*5 + 0,
-		0: (x, y) =>  `${x},${y},0`, //(y*(imgWidth+1)+x)*5 + 1,
-		4: (x, y) =>  `${x},${y},4`, //(y*(imgWidth+1)+x)*5 + 2,
-		12: (x, y) => `${x},${y},12`, //(y*(imgWidth+1)+x)*5 + 3,
-		8: (x, y) =>  `${x},${y},8`, //(y*(imgWidth+1)+x)*5 + 4,
+		1: (x, y) =>  `${x},${y},1`, 
+		0: (x, y) =>  `${x},${y},0`, 
+		4: (x, y) =>  `${x},${y},4`, 
+		12: (x, y) => `${x},${y},12`,
+		8: (x, y) =>  `${x},${y},8`, 
 	}
 
 	voronoiVertexIndex_to_globallyUniqueIndex[15] = (x,y) => voronoiVertexIndex_to_globallyUniqueIndex[4](x-1,y)
@@ -750,9 +753,10 @@ function init() {
 		return [pixelX+offsets[voronoiVertexIndex][0], pixelY+offsets[voronoiVertexIndex][1]]
 	}
 
-	// then, once I have the adjacency list, any key that has a list of length 3 or more is a place where at least two splines meet. I can resolve these directly in the adjacency list
-	// I can iterate over each point in the list, building the splines from there
 
+	// iterate over each pixel and check each of its neighbors for dissimilar pixels
+	// when a pair of dissimilar pixels is found, record any edges that they share. these edges will eventually be stitched together into the splines
+	var pointsThatArePartOfContouringSplines = {}
 	var adjacencyList = {}
 	for (var x = 0; x < imgWidth; x++) {	
 		for (var y = 0; y < imgHeight; y++) {
@@ -760,18 +764,20 @@ function init() {
 
 			for (var q = 0; q < nextNeighbors.length; q++) { // we'll only consider neighbors 0, 1, 2, and 3 in order to prevent duplicates. the pixels before this one will have 7 covered, and the pixels below will cover 4, 5, and 6
 				var i = nextNeighbors[q]
-				if (similarityGraph[x][y][i]) continue;
+				if (similarityGraph[x][y][i]) continue; // no splines exist on the boundries of similar pixels
 
 				var neighborX = x+deltas[i][0]
 				var neighborY = y+deltas[i][1]
 				if (neighborX < 0 || neighborX >= imgWidth || neighborY < 0 || neighborY >= imgHeight) continue
 
+				// iterate over all of this pixels voronoi vertices (in global index form, rather than in pixel-relative index form)
 				var neighborVerts = voronoiVerts[neighborX][neighborY]
 				var neighborVerts = [...neighborVerts].map(vert => voronoiVertexIndex_to_globallyUniqueIndex[vert](neighborX, neighborY))
 				for (var i = 0; i < thisPixelVoronoiVerts.length-1; i++) {
 					var globalIndex0 = thisPixelVoronoiVerts[i]
 					var globalIndex1 = thisPixelVoronoiVerts[i+1]
 
+					// check to see if this neighbor has edge (globalIndex0, globalIndex1)
 					try { 
 						var idx = neighborVerts.indexOf(globalIndex0) 
 						if (idx === -1) continue
@@ -783,15 +789,23 @@ function init() {
 						if (!edgeIsShared) continue
 					} catch { continue }
 
+					// the two dissimilar pixels do share this edge, so add this edge to the adjacency list
 					if (!adjacencyList[globalIndex0]) adjacencyList[globalIndex0] = []
 					if (!adjacencyList[globalIndex1]) adjacencyList[globalIndex1] = []
 
 					if (!adjacencyList[globalIndex0].includes(globalIndex1)) adjacencyList[globalIndex0].push(globalIndex1)
 					if (!adjacencyList[globalIndex1].includes(globalIndex0)) adjacencyList[globalIndex1].push(globalIndex0)
+
+					// for later, cache whether this edge will eventually be part of a "contour" spline. that is, a spline that separates two VERY dissimilar colors
+					if (veryDissimilarColors(yuvImage[x][y], yuvImage[neighborX][neighborY])) {
+						pointsThatArePartOfContouringSplines[globalIndex0] = true
+						pointsThatArePartOfContouringSplines[globalIndex1] = true
+					}
 				}
 			}
 		}
 	}
+
 
 	var splines = []
 	var valence3Nodes = Object.keys(adjacencyList).filter(point => adjacencyList[point].length >= 3)
@@ -829,21 +843,61 @@ function init() {
 		splines.push(spline)
 	})
 
+	// helper function from https://stackoverflow.com/a/53107778/9643841
+	const pairsOfArray = array => (
+		array.reduce((acc, val, i1) => [
+		  ...acc,
+		  ...new Array(array.length - 1 - i1).fill(0)
+			.map((v, i2) => ([array[i1], array[i1 + 1 + i2]]))
+		], [])
+	  ) 
+
 	// step 3: deal with all the valence3 nodes
 	valence3Nodes.forEach(point => {
 		// this is where 3 spline meetings are resolved
-		// for now, I'll just resolve them randomly
 		var allConnectedSplines = adjacencyList[point].map(neighborPoint => splinesByConstituents[neighborPoint])
-		var joinSpline0 = splinesByConstituents[adjacencyList[point][0]]
-		var joinSpline1 = splinesByConstituents[adjacencyList[point][1]]
-		var terminateSplines = adjacencyList[point]
-			.slice(2, adjacencyList[point].length)
-			.map(neighborPoint => splinesByConstituents[neighborPoint])
+		var joinSpline0 = null //splinesByConstituents[adjacencyList[point][0]]
+		var joinSpline1 = null //splinesByConstituents[adjacencyList[point][1]]
 
+		// var allSplinePairs = pairsOfArray(allConnectedSplines)
+		// try to prioritize connecting splines that separate very dissimilar colors (contouring splines)
+		var countourSplineEndpoints = adjacencyList[point].filter(neighborPoint => pointsThatArePartOfContouringSplines[neighborPoint])
+		var shadingSplineEndpoints  = adjacencyList[point].filter(neighborPoint => !pointsThatArePartOfContouringSplines[neighborPoint])
+		var pairsToConsiderJoining = []
 
-		console.log(terminateSplines.length)
+		if (countourSplineEndpoints.length == 2) {
+			pairsToConsiderJoining = [countourSplineEndpoints[0], countourSplineEndpoints[1]]
+		} else if (countourSplineEndpoints.length == 1) {
+			shadingSplineEndpoints.forEach(splinePoint => pairsToConsiderJoining.push([countourSplineEndpoints[0], splinePoint]))
+		} else {
+			if (countourSplineEndpoints.length <= 0) pairsToConsiderJoining = pairsOfArray(shadingSplineEndpoints)
+			if (countourSplineEndpoints.length >= 3) pairsToConsiderJoining = pairsOfArray(countourSplineEndpoints)
+		}
+
+		// out of the pairs we're considering, pick the one forms the smallest angle with `point` as the centerpoint
+		var bestPair = pairsToConsiderJoining[0]
+		var bestAngle = 9999
+		pairsToConsiderJoining.forEach(([p0, p1]) => {
+			function cartesianToRelativePolarTheta(x, y) {
+				return Math.atan2(y-point[1] , x-point[0])
+			}
+
+			var theta0 = cartesianToRelativePolarTheta(...p0)
+			var theta1 = cartesianToRelativePolarTheta(...p1)
+			var angle = Math.abs(theta0-theta1)
+
+			if (angle < bestAngle) {
+				bestAngle = angle
+				bestPair = [p0, p1]
+			}
+		})
+
+		// we've got our points! convert them to splines
+		joinSpline0 = splinesByConstituents[bestPair[0]]
+		joinSpline1 = splinesByConstituents[bestPair[1]]
+
+		// add self to all adjacent splines (whether a spline gets joined with another or just terminates, this has to happen anyway)
 		allConnectedSplines.forEach(spline => {
-			console.log(spline)
 			if (adjacencyList[point].includes(spline[0])) spline.unshift(point) // this point is adjacent to the start of the spline
 			else if (adjacencyList[point].includes(spline[spline.length-1])) spline.push(point) // this point is adjacent to the end of the spline
 			else { console.error("attempted to add a point to a non-adjacent spline"); console.log(adjacencyList[point]); console.log(spline) }
@@ -856,22 +910,24 @@ function init() {
 			return
 		}
 
+		// construct a new spline made by laying the two "to join" splines together end-to-end (and being careful not to introduce any duplicates)
 		var newSpline = []
 		if (joinSpline0[0] == joinSpline1[0]) {
-			//joinSpline1.slice(1, joinSpline1.length).forEach(p => joinSpline0.unshift(p))
+
 			newSpline = [...joinSpline0, ...joinSpline1.slice(1, joinSpline1.length).reverse()]
 
 		} else if (joinSpline0[0] == joinSpline1[joinSpline1.length-1]) {
-			//joinSpline1.reverse().slice(1, joinSpline1.length).forEach(p => joinSpline0.unshift(p))
+			
 			newSpline = [...joinSpline1, ...joinSpline0.slice(1, joinSpline0.length)]
 
 		} else if (joinSpline0[joinSpline0.length-1] == joinSpline1[0]) {
-			//joinSpline1.slice(1, joinSpline1.length).forEach(p => joinSpline0.push(p))
+			
 			newSpline = [...joinSpline0, ...joinSpline1.slice(1, joinSpline1.length)]
 
 		} else if (joinSpline0[joinSpline0.length-1] == joinSpline1[joinSpline1.length-1]) {
-			//joinSpline1.reverse().slice(1, joinSpline1.length).forEach(p => joinSpline0.push(p))
+			
 			newSpline = [...joinSpline0, ...joinSpline1.reverse().slice(1, joinSpline1.length)]
+
 		}
 
 		// we dissolved the old splines, so we need to update everywhere it's referenced
