@@ -167,21 +167,24 @@ class ClampedClosedBSpline {
 
 	
 	// function from https://github.com/Tagussan/BSpline/blob/master/main.js
-	drawToCanvas(ctx){
+	drawToCanvas(ctx, drawPoints = false){
 
 		//ctx.clearRect(0,0,canv.width,canv.height);
 		const pts = this.points
 		if(pts.length == 0) {
 			return;
 		}
-		for(var i = 0;i<pts.length;i++){
-			ctx.fillStyle = "rgba(0,255,0,1)";
-			ctx.beginPath();
-			ctx.arc(pts[i][0],pts[i][1],3,0,Math.PI*2,false);
-			ctx.fill();
-			ctx.closePath();   
-		}
 		
+		if (drawPoints){
+			for(var i = 0;i<pts.length;i++){
+				ctx.fillStyle = "rgba(0,255,0,10)";
+				ctx.beginPath();
+				ctx.arc(pts[i][0],pts[i][1],3,0,Math.PI*2,false);
+				ctx.fill();
+				ctx.closePath();   
+			}
+		}
+
 		ctx.beginPath();
 		var oldx,oldy,x,y;
 		oldx = this.evaluate(0)[0];
