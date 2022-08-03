@@ -21,7 +21,7 @@ class ClampedClosedBSpline {
 			
 			const newPoints = [...points]
 			for (var i = 0; i < degree; i++) {
-				newPoints.unshift(points[points.length-(i+1)])
+				//newPoints.unshift(points[points.length-(i+1)])
 				newPoints.push(points[i])
 				if(!Array.isArray(points[i])) console.error('non point point')
 				//if(!Array.isArray(points[i])) console.log(points[i])
@@ -174,7 +174,7 @@ class ClampedClosedBSpline {
 		if(pts.length == 0) {
 			return;
 		}
-		
+
 		if (drawPoints){
 			for(var i = 0;i<pts.length;i++){
 				ctx.fillStyle = "rgba(0,255,0,10)";
