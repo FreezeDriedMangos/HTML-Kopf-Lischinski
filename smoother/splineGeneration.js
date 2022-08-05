@@ -174,12 +174,16 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 		valence3Neighbors.forEach(neighbor => {
 			if (dontDuplicate[neighbor] && dontDuplicate[neighbor][point]) return
 
-			splines.push([point, neighbor])
+			var spline = [point, neighbor]
+			splines.push(spline)
 
 			dontDuplicate[point] = dontDuplicate[point] || {}
 			dontDuplicate[point][neighbor] = true
 			dontDuplicate[neighbor] = dontDuplicate[neighbor] || {}
 			dontDuplicate[neighbor][point] = true
+
+			if (!splinesByConstituents[neighbor]) splinesByConstituents[neighbor] = spline
+			if (!splinesByConstituents[point])    splinesByConstituents[point]    = spline
 		})
 	})
 
@@ -302,6 +306,7 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 		splines,
 		splinesByConstituents,
 		adjacencyList,
-		pointsThatArePartOfContouringSplines
+		pointsThatArePartOfContouringSplines,
+		pointsThatArePartOfGhostSplines
 	}
 }
