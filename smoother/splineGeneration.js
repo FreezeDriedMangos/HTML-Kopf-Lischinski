@@ -162,8 +162,25 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 			if (current === loopStart) { spline.push(point); break; } // close the looped spline and then break
 		}
 		
+		if (spline.length <= 0) return
 
 		splines.push(spline)
+	})
+
+	// check for edges whose two vertices are both valence3-or-higher nodes
+	const dontDuplicate = {}
+	valence3Nodes.forEach(point => {
+		const valence3Neighbors = adjacencyList[point].filter(neighbor => adjacencyList[neighbor].length >= 3)
+		valence3Neighbors.forEach(neighbor => {
+			if (dontDuplicate[neighbor] && dontDuplicate[neighbor][point]) return
+
+			splines.push([point, neighbor])
+
+			dontDuplicate[point] = dontDuplicate[point] || {}
+			dontDuplicate[point][neighbor] = true
+			dontDuplicate[neighbor] = dontDuplicate[neighbor] || {}
+			dontDuplicate[neighbor][point] = true
+		})
 	})
 
 	// helper function from https://stackoverflow.com/a/53107778/9643841
@@ -199,7 +216,7 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 
 		// out of the pairs we're considering, pick the one forms the smallest angle with `point` as the centerpoint
 		var bestPair = pairsToConsiderJoining[0]
-		var bestAngle = 9999
+		var bestAngle = -10
 		pairsToConsiderJoining.forEach(([p0, p1]) => {
 			function cartesianToRelativePolarTheta(x, y) {
 				return Math.atan2(y-point[1] , x-point[0])
@@ -207,9 +224,9 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 
 			var theta0 = cartesianToRelativePolarTheta(...p0)
 			var theta1 = cartesianToRelativePolarTheta(...p1)
-			var angle = Math.abs(theta0-theta1)
+			var angle = Math.PI - Math.abs(theta0-theta1)
 
-			if (angle < bestAngle) {
+			if (angle > bestAngle) {
 				bestAngle = angle
 				bestPair = [p0, p1]
 			}
