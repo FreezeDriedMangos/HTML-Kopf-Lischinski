@@ -149,7 +149,10 @@ class ClampedClosedBSpline {
 		//# Integrates the function in intervals
 		const spans_ = this.Points_In_Span(index)
 		const spans = spans_.filter(span => span[0] != span[1]) // [span for span in spans_ if span[0] != span[1]]
-		return spans.reduce((sum, span) => sum+this.Integrate_part(func, span, intervals), 0)
+		const retval = spans.reduce((sum, span) => sum+this.Integrate_part(func, span, intervals), 0)
+
+		//	console.log(retval)
+		return retval
 	}
 
 	// these functions were made by modifying code from https://github.com/vvanirudh/Pixel-Art/blob/master/src/depixelizer/geometry/bspline.py
@@ -166,8 +169,23 @@ class ClampedClosedBSpline {
 	// =============================
 
 	
+	// modified from https://github.com/Tagussan/BSpline/blob/master/main.js
+	toPath() {
+		const path = [];
+
+		var x,y;
+		for(var t = 0;t <= 1;t+=0.001){
+			var interpol = this.evaluate(t);
+			x = interpol[0];
+			y = interpol[1];
+			path.push([x, x])
+		}
+
+		return path
+	}
+
 	// function from https://github.com/Tagussan/BSpline/blob/master/main.js
-	drawToCanvas(ctx, drawPoints = false){
+	drawToCanvas(ctx, drawPoints = false, color=[0,0,0]){
 
 		//ctx.clearRect(0,0,canv.width,canv.height);
 		const pts = this.points
@@ -189,6 +207,7 @@ class ClampedClosedBSpline {
 		var oldx,oldy,x,y;
 		oldx = this.evaluate(0)[0];
 		oldy = this.evaluate(0)[1];
+		ctx.strokeStyle = `rgba(${color.join(',')},255)`
 		for(var t = 0;t <= 1;t+=0.001){
 			ctx.moveTo(oldx,oldy);
 			var interpol = this.evaluate(t);
