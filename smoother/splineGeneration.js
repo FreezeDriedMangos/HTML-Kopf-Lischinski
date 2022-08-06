@@ -228,7 +228,7 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 
 			var theta0 = cartesianToRelativePolarTheta(...p0)
 			var theta1 = cartesianToRelativePolarTheta(...p1)
-			var angle = Math.PI - Math.abs(theta0-theta1)
+			var angle = Math.PI - (Math.abs(theta0-theta1)%(2*Math.PI) - Math.PI)
 
 			if (angle > bestAngle) {
 				bestAngle = angle

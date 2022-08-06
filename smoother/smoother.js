@@ -341,11 +341,6 @@ function init() {
 
 
 
-	return
-
-
-
-
 	// draw splines
 	var splinesCanvas = document.createElement('canvas');
 	imgWidth = splinesCanvas.width = imgWidth*pixelSize;
@@ -357,10 +352,9 @@ function init() {
 		var absolutePoints_scaled = absolutePoints.map(point => [pixelSize*point[0], pixelSize*point[1]])
 		
 		const splineObject = new ClampedClosedBSpline(4, absolutePoints_scaled)
-		splineObject.drawToCanvas(splinesCanvas.getContext('2d'), true, color=pointsThatArePartOfContouringSplines[splinePointIndexes[0]]?[0,0,0] : [120,120,220])
+		splineObject.drawToCanvas(splinesCanvas.getContext('2d'), false, color=pointsThatArePartOfContouringSplines[splinePointIndexes[0]]?[0,0,0] : [120,120,220])
 	})
 
-	
 	//
 	// smoothen splines
 	//
@@ -375,7 +369,7 @@ function init() {
 	document.body.appendChild(smoothedSplinesCanvas);
 
 	splineObjects.forEach(splineObject => {
-		splineObject.drawToCanvas(smoothedSplinesCanvas.getContext('2d'), true)
+		splineObject.drawToCanvas(smoothedSplinesCanvas.getContext('2d'), false)
 	})
 
 	//

@@ -1,6 +1,26 @@
 
 function smoothenSplines(splines) {
-	
+	return smoothenByRandomDeletionAndHighDegree(splines)
+}
+
+function smoothenByRandomDeletionAndHighDegree(splines) {
+	const splineObjects = splines.map(splinePointIndexes => {
+		var newIndexes = [...splinePointIndexes]
+		for (var i = 1; i < newIndexes.length-1; i++) {
+			if (newIndexes.length < 8) break;
+			if (Math.random() > 0.6) newIndexes.splice(i, 1)
+		}
+		
+		var absolutePoints = newIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i))
+		var absolutePoints_scaled = absolutePoints.map(point => [pixelSize*point[0], pixelSize*point[1]])
+		
+		return new ClampedClosedBSpline(8, absolutePoints_scaled);
+	})
+
+	return {splineObjects}
+}
+
+function smoothenByCurvature(splines) {
 	const POSITOINAL_ENERGY_WEIGHT = 0
 	const MAX_RANDOM_OFFSET = 0.5*pixelSize
 	const CURVATURE_INTEGRAL_INTERVALS_PER_SPAN = 20
@@ -66,7 +86,9 @@ function smoothenSplines(splines) {
 			splineObject.points[index][1] = bestEnergy_point[1]
 		})
 	})
+}
 
+function smoothenByShapesOfBestFit() {
 	// TODO: try a different approach to smoothing - simultaneously move all spline points (not spline object points, just the raw spline points) orthogonally towards both the line of best fit and circle of best fit with its n (~5) closest neighbors on each side. that is, move it towards the line/circle of best fit of spline[i-5:i+5] (wrapped/clamped ofc, but also do not try to move endpoints of splines that are not closed)
 	
 
