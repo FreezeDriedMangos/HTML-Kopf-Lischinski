@@ -201,6 +201,10 @@ function init() {
 		canvas.getContext('2d').imageSmoothingEnabled = false
 		canvas.getContext('2d').drawImage(img, 0, 0, img.width, img.height);
 		console.log({imgWidth, imgHeight})
+
+		// TODO: make an imageWidth+2 by imageHeight+2 array and fill it with the colors of the image, the 1 pixel wide ring on the edges should be filled with [0,0,0,0]
+		// then make getPixelData read from this array
+		// lastly, actually add 2 to the stored values of imageWidth/imageHeight so they reflect the size of the new array
 	}
 	function getPixelData(x, y) {
 		return canvas.getContext('2d').getImageData(x, y, 1, 1).data;
@@ -343,8 +347,8 @@ function init() {
 
 	// draw splines
 	var splinesCanvas = document.createElement('canvas');
-	imgWidth = splinesCanvas.width = imgWidth*pixelSize;
-	imgHeight = splinesCanvas.height = imgHeight*pixelSize;
+	splinesCanvas.width = imgWidth*pixelSize;
+	splinesCanvas.height = imgHeight*pixelSize;
 	document.body.appendChild(splinesCanvas);
 
 	splines.forEach(splinePointIndexes => {
@@ -364,8 +368,8 @@ function init() {
 
 	// draw smoothened splines
 	var smoothedSplinesCanvas = document.createElement('canvas');
-	imgWidth = smoothedSplinesCanvas.width = imgWidth*pixelSize;
-	imgHeight = smoothedSplinesCanvas.height = imgHeight*pixelSize;
+	smoothedSplinesCanvas.width = imgWidth*pixelSize;
+	smoothedSplinesCanvas.height = imgHeight*pixelSize;
 	document.body.appendChild(smoothedSplinesCanvas);
 
 	splineObjects.forEach(splineObject => {
@@ -384,6 +388,191 @@ function init() {
 	// then flood fill, 
 	// then gaussian blur, but do not blur accross splines separating dissimilarColors
 	// https://stackoverflow.com/questions/98359/fastest-gaussian-blur-implementation
+
+
+	// var newColors = []
+	// for(var x = 0; x < imgWidth*pixelSize; x++) {
+	// 	newColors.push([])
+	// 	for(var y = 0; y < imgHeight*pixelSize; y++) {
+	// 		newColors.push([0,0,0,0])
+	// 	}
+	// }
+
+	if (false){
+		// https://stackoverflow.com/a/58485681/9643841
+		var colorCanvas = document.createElement('canvas');
+		colorCanvas.width = imgWidth*pixelSize;
+		colorCanvas.height = imgHeight*pixelSize;
+		document.body.appendChild(colorCanvas);
+		var ctx = colorCanvas.getContext("2d");
+		var data = ctx.createImageData(imgWidth*pixelSize, imgHeight*pixelSize);
+		var newColors = new Uint32Array(data.data.buffer);
+
+		var visited = {}
+		var frontier = []
+		// form boundaries from the smoothened splines
+		splineObjects.forEach(spline => {
+			// modified from https://github.com/Tagussan/BSpline/blob/master/main.js
+			var interpol = spline.evaluate(0);
+			var x,y,index;
+			for(var t = 0;t <= 1;t+=0.001){
+				interpol = spline.evaluate(t);
+				x = Math.floor(interpol[0]);
+				y = Math.floor(interpol[1]);
+
+				index = (y*imgWidth*pixelSize + x)*4
+				visited[index] = true
+				newColors[index+0] = 0
+				newColors[index+1] = 0
+				newColors[index+2] = 0
+				newColors[index+3] = 255
+			}
+		})
+
+		//console.log(visited)
+
+		// seed the image from the pixel centers
+		for(var x = 0; x < imgWidth; x++) {
+			for(var y = 0; y < imgHeight; y++) {
+				frontier.push([x*pixelSize, y*pixelSize, getPixelData(x, y)])
+			}
+		}
+
+		// grow the seeds
+		var debug = 0
+		const floodfillDeltas = [[-1,0], [0,-1], [1,0], [0,1]]
+		while (frontier.length > 0) {
+			//if (debug++ > 0) break
+			debug++
+
+			var [x, y, color] = frontier.shift()
+			var index = (y*imgWidth*pixelSize + x)*4
+
+			if (visited[index]) continue
+			visited[index] = true
+
+			newColors[index+0] = color[0]
+			newColors[index+1] = color[1]
+			newColors[index+2] = color[2]
+			newColors[index+3] = color[3]
+
+			floodfillDeltas.forEach(([dx, dy])=> {
+				const nx = dx+x
+				const ny = dy+y
+				var neighborIndex = (ny*imgWidth*pixelSize + nx)*4
+				if (visited[neighborIndex]) return
+				if (nx < 0 || ny < 0 || nx >= imgWidth*pixelSize || ny >= imgHeight*pixelSize) return
+				frontier.push([nx, ny, color])
+			})
+		}
+		console.log(debug)
+
+		console.log("done coloring image")
+		data.data.set(newColors);
+		ctx.putImageData(data, 0, 0);
+	}
+
+
+
+
+
+
+
+
+	var colorCanvas = document.createElement('canvas');
+	colorCanvas.width = imgWidth*pixelSize;
+	colorCanvas.height = imgHeight*pixelSize;
+	document.body.appendChild(colorCanvas);
+
+	// high performance flood fill from https://codereview.stackexchange.com/a/212994
+	(function () {
+		"use strict"; // Always for performant code
+	
+		// Colors as 32bit unsigned ints. Order ABGR
+		const black = 0xFF000000;
+		const notQuiteBlack = 0xFF010101;
+		const red = 0xFF0000FF;
+		const green = 0xFF00FF00;
+		const blue = 0xFFFF0000;
+		const yellow = red | green;
+		const magenta = red | blue;
+	
+		const cvs = colorCanvas //document.getElementById("paint");
+		const width = cvs.width;  // Get potencial slow accessors into vars.
+		const w = cvs.width;  // alias
+		const height = cvs.height;
+		const size = width * height;
+		const ctx = cvs.getContext('2d');
+	
+		// black background
+		ctx.fillStyle = "black";
+		ctx.fillRect(0, 0, width, height);
+	
+		const imageData = ctx.getImageData(0, 0, width, height);
+	
+		// Use 32bit buffer for single pixel read writes
+		const d32 = new Uint32Array(imageData.data.buffer);  
+	
+		const start = [
+			// [40 * w + 40, red],  // work in precalculated pixel indexes
+			// [10 * w + 20, green],
+			// [23 * w + 42, blue],
+			// [300 * w +333, yellow],
+			// [200 * w + 333, magenta]
+		];
+		
+		// seed the image from the pixel centers
+		for(var x = 0; x < imgWidth; x++) {
+			for(var y = 0; y < imgHeight; y++) {
+				var rgba = getPixelData(x, y)
+				const abgr = (rgba[3] << 24) | (rgba[2] << 16) | (rgba[1] << 8) | (rgba[0])
+				start.push([y*pixelSize*w+x*pixelSize, abgr === black ? notQuiteBlack : abgr])
+			}
+		}
+
+		const pixOff = [w, -w, 1, -1];  // lookup for pixels left right top bottom
+		const pixOffX = [0, 0, 1, -1];  // lookup for pixel x left right
+	
+		const queue = [];  // keep queue content as simple as possible.
+		for (const pixel of start) { 
+			queue.push(pixel[0]);     // Populate the queue
+			d32[pixel[0]] = pixel[1]; // Write pixel directly to buffer
+		}
+		
+		while (queue.length) {
+			const idx = queue.shift();
+			const x = idx % w; // Need the x coord for bounds test
+			for (let i = 0; i< pixOff.length; i++) {
+				const nIdx = idx + pixOff[i]; 
+				if (d32[nIdx] === black) {   // Pixels off top and bottom 
+											 // will return undefined
+					const xx = x + pixOffX[i];
+					if (xx > -1 && xx < w ) {
+						d32[nIdx] = d32[idx];
+						queue.push(nIdx);
+					}
+				}
+			}
+		 }
+		 for (const pixel of start) { d32[pixel[0]] = pixel[1] }
+		 ctx.putImageData(imageData, 0, 0);
+	})();
+
+
+	splineObjects.forEach(splineObject => {
+		splineObject.drawToCanvas(colorCanvas.getContext('2d'), false)
+	})
+
+
+
+
+
+
+
+
+
+
+	// TODO: gaussian blur
 
 
 	
@@ -407,8 +596,8 @@ function init() {
 	// }
 
 	// var finalColorCanvas = document.createElement('canvas');
-	// imgWidth = finalColorCanvas.width = imgWidth*UPSCALE;
-	// imgHeight = finalColorCanvas.height = imgHeight*UPSCALE;
+	// finalColorCanvas.width = imgWidth*UPSCALE;
+	// finalColorCanvas.height = imgHeight*UPSCALE;
 	// document.body.appendChild(finalColorCanvas);
 
 	// const ctx = finalColorCanvas.getContext('2d')

@@ -178,7 +178,7 @@ class ClampedClosedBSpline {
 			var interpol = this.evaluate(t);
 			x = interpol[0];
 			y = interpol[1];
-			path.push([x, x])
+			path.push([x, y])
 		}
 
 		return path
