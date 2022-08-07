@@ -356,7 +356,7 @@ function init() {
 		var absolutePoints_scaled = absolutePoints.map(point => [pixelSize*point[0], pixelSize*point[1]])
 		
 		const splineObject = new ClampedClosedBSpline(4, absolutePoints_scaled)
-		splineObject.drawToCanvas(splinesCanvas.getContext('2d'), false, color=pointsThatArePartOfContouringSplines[splinePointIndexes[0]]?[0,0,0] : [120,120,220])
+		splineObject.drawToCanvas(splinesCanvas.getContext('2d'), false, color=pointsThatArePartOfContouringSplines[splinePointIndexes[0]]?[0,0,0,255] : [120,120,220,255])
 	})
 
 	//
@@ -491,6 +491,7 @@ function init() {
 		// Colors as 32bit unsigned ints. Order ABGR
 		const black = 0xFF000000;
 		const notQuiteBlack = 0xFF010101;
+		const clear = 0x00000000;
 		const red = 0xFF0000FF;
 		const green = 0xFF00FF00;
 		const blue = 0xFFFF0000;
@@ -513,6 +514,33 @@ function init() {
 		// Use 32bit buffer for single pixel read writes
 		const d32 = new Uint32Array(imageData.data.buffer);  
 	
+
+
+
+		// draw boundaries
+		const boundaries = []
+		splineObjects.forEach(splineObject => {
+			// canvas.lineTo doesn't support full alpha, so I made my own drawing code
+			var path = splineObject.toPath()
+			for (var i = 0; i < path.length-1; i++) {
+				var vector = [path[i+1][0]-path[i][0], path[i+1][1]-path[i][1]]
+				var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1])
+				var norm = [vector[0]/mag, vector[1]/mag]
+				var magCiel = Math.ceil(mag)
+
+				var loc = [path[i][0], path[i][1]]
+				for (var j = 0; j <= magCiel; j++) {
+					const indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
+					d32[indx] = clear
+					boundaries.push(indx)
+					loc[0] += norm[0]
+					loc[1] += norm[1]
+				}
+			}
+		})
+
+
+
 		const start = [
 			// [40 * w + 40, red],  // work in precalculated pixel indexes
 			// [10 * w + 20, green],
@@ -526,7 +554,9 @@ function init() {
 			for(var y = 0; y < imgHeight; y++) {
 				var rgba = getPixelData(x, y)
 				const abgr = (rgba[3] << 24) | (rgba[2] << 16) | (rgba[1] << 8) | (rgba[0])
-				start.push([y*pixelSize*w+x*pixelSize, abgr === black ? notQuiteBlack : abgr])
+				const canvasY = y*pixelSize + pixelSize/2 
+				const canvasX = x*pixelSize + pixelSize/2
+				start.push([canvasY*w+canvasX, abgr === black ? notQuiteBlack : abgr])
 			}
 		}
 
@@ -555,13 +585,14 @@ function init() {
 			}
 		 }
 		 for (const pixel of start) { d32[pixel[0]] = pixel[1] }
+		 for (const coord of boundaries) { for (const off of pixOff) d32[coord] = d32[coord] || d32[coord+off] } // sometimes boundaries are vertical or horizontal, so we'll just try every neighbor
 		 ctx.putImageData(imageData, 0, 0);
 	})();
 
 
-	splineObjects.forEach(splineObject => {
-		splineObject.drawToCanvas(colorCanvas.getContext('2d'), false)
-	})
+	// splineObjects.forEach(splineObject => {
+	// 	splineObject.drawToCanvas(colorCanvas.getContext('2d'), false)
+	// })
 
 
 
