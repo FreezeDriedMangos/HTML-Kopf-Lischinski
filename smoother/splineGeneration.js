@@ -130,6 +130,8 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 					if (!adjacencyList[globalIndex0].includes(globalIndex1)) adjacencyList[globalIndex0].push(globalIndex1)
 					if (!adjacencyList[globalIndex1].includes(globalIndex0)) adjacencyList[globalIndex1].push(globalIndex0)
 
+
+
 					// for later, cache whether this edge will eventually be part of a "contour" spline. that is, a spline that separates two VERY dissimilar colors
 					if (veryDissimilarColors(yuvImage[x][y], yuvImage[neighborX][neighborY])) {
 						pointsThatArePartOfContouringSplines[globalIndex0] = true
@@ -265,9 +267,11 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 		// add self to all adjacent splines (whether a spline gets joined with another or just terminates, this has to happen anyway)
 		allConnectedSplines.forEach(spline => {
 			if (!spline) { console.error("Found a null spline. The evalutation will likely fail further down the line."); return } // TODO: this should never be null
+			if (spline.includes(point)) return;
+
 			if (adjacencyList[point].includes(spline[0])) spline.unshift(point) // this point is adjacent to the start of the spline
 			else if (adjacencyList[point].includes(spline[spline.length-1])) spline.push(point) // this point is adjacent to the end of the spline
-			else { console.error("attempted to add a point to a non-adjacent spline"); console.log(adjacencyList[point]); console.log(spline) }
+			else { console.error("attempted to add a point to a non-adjacent spline"); console.log(point); console.log(adjacencyList[point]); console.log(spline) }
 		})
 
 		if (!joinSpline0 || !joinSpline1) return // TODO: these should never be null
@@ -333,50 +337,50 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 	// record the colors
 	const splineLeftSideColor  = []
 	const splineRightSideColor = []
-	splines.forEach(spline => {
-		var singleLeftColor = true
-		var singleRightColor = true
-		var leftColor = undefined
-		var rightColor = undefined
+	// splines.forEach(spline => {
+	// 	var singleLeftColor = true
+	// 	var singleRightColor = true
+	// 	var leftColor = undefined
+	// 	var rightColor = undefined
 
-		for (var i = 0; i < spline.length-1; i++) {
-			var newLeftColor, newRightColor
+	// 	for (var i = 0; i < spline.length-1; i++) {
+	// 		var newLeftColor, newRightColor
 
-			if (edgeLeftSidePixel[spline[i]+'-'+spline[i+1]] == undefined) continue
+	// 		if (edgeLeftSidePixel[spline[i]+'-'+spline[i+1]] == undefined) continue
 
-			newLeftColor = getPixelData(...edgeLeftSidePixel[spline[i]+'-'+spline[i+1]]).join(",")
-			newRightColor = getPixelData(...edgeRightSidePixel[spline[i]+'-'+spline[i+1]]).join(",")
+	// 		newLeftColor = getPixelData(...edgeLeftSidePixel[spline[i]+'-'+spline[i+1]]).join(",")
+	// 		newRightColor = getPixelData(...edgeRightSidePixel[spline[i]+'-'+spline[i+1]]).join(",")
 
-			singleLeftColor = singleLeftColor || (leftColor != undefined && leftColor !== newLeftColor)
-			singleRightColor = singleRightColor || (rightColor != undefined && rightColor !== newRightColor)
+	// 		singleLeftColor = singleLeftColor || (leftColor != undefined && leftColor !== newLeftColor)
+	// 		singleRightColor = singleRightColor || (rightColor != undefined && rightColor !== newRightColor)
 
-			leftColor = newLeftColor
-			rightColor = newRightColor
-		}
-		splineLeftSideColor.push(singleLeftColor? leftColor.split(',').map(c => parseInt(c)) : undefined)
-		splineRightSideColor.push(singleRightColor? rightColor.split(',').map(c => parseInt(c)) : undefined)
+	// 		leftColor = newLeftColor
+	// 		rightColor = newRightColor
+	// 	}
+	// 	splineLeftSideColor.push(singleLeftColor? leftColor.split(',').map(c => parseInt(c)) : undefined)
+	// 	splineRightSideColor.push(singleRightColor? rightColor.split(',').map(c => parseInt(c)) : undefined)
 
 
-		// var leftPixelCoords = splinePointLeftSidePixel[spline[0]]
-		// var rightPixelCoords = splinePointRightSidePixel[spline[0]]
-		// var leftColor = getPixelData(...leftPixelCoords).join(",")
-		// var rightColor = getPixelData(...rightPixelCoords).join(",")
+	// 	// var leftPixelCoords = splinePointLeftSidePixel[spline[0]]
+	// 	// var rightPixelCoords = splinePointRightSidePixel[spline[0]]
+	// 	// var leftColor = getPixelData(...leftPixelCoords).join(",")
+	// 	// var rightColor = getPixelData(...rightPixelCoords).join(",")
 
-		// console.log('SPLINE ===============================================================')
-		// spline.forEach(pointIndex => {
-		// 	leftPixelCoords = splinePointLeftSidePixel[pointIndex]
-		// 	rightPixelCoords = splinePointRightSidePixel[pointIndex]
-		// 	var newLeftColor = getPixelData(...leftPixelCoords).join(",")
-		// 	var newRightColor = getPixelData(...rightPixelCoords).join(",")
+	// 	// console.log('SPLINE ===============================================================')
+	// 	// spline.forEach(pointIndex => {
+	// 	// 	leftPixelCoords = splinePointLeftSidePixel[pointIndex]
+	// 	// 	rightPixelCoords = splinePointRightSidePixel[pointIndex]
+	// 	// 	var newLeftColor = getPixelData(...leftPixelCoords).join(",")
+	// 	// 	var newRightColor = getPixelData(...rightPixelCoords).join(",")
 
-		// 	console.log(newLeftColor)
-		// 	leftColor = leftColor == newLeftColor ? leftColor : undefined
-		// 	rightColor = rightColor == newRightColor ? rightColor : undefined
-		// })
+	// 	// 	console.log(newLeftColor)
+	// 	// 	leftColor = leftColor == newLeftColor ? leftColor : undefined
+	// 	// 	rightColor = rightColor == newRightColor ? rightColor : undefined
+	// 	// })
 
-		// splineLeftSideColor.push(leftColor == undefined? leftColor : leftColor.split(',').map(c => parseInt(c)))
-		// splineRightSideColor.push(rightColor == undefined? rightColor : rightColor.split(',').map(c => parseInt(c)))
-	})
+	// 	// splineLeftSideColor.push(leftColor == undefined? leftColor : leftColor.split(',').map(c => parseInt(c)))
+	// 	// splineRightSideColor.push(rightColor == undefined? rightColor : rightColor.split(',').map(c => parseInt(c)))
+	// })
 
 	return {
 		splines,

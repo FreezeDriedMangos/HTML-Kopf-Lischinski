@@ -17,35 +17,51 @@ function computeSimilarityGraph(imgWidth, imgHeight, getPixelData) {
 	// 6 5 4
 
 	var similarityGraph = []; // format: similarityGraph[x][y] => [upperLeftPixel is similar, upperPixel is similar, upperRightPixel is similar, ...] // (out-of-bounds pixels are never considered similar)
+	var equalityGraph = [];
 
 	for (var x = 0; x < imgWidth; x++) {
 		similarityGraph.push([])
+		equalityGraph.push([])
 		for (var y = 0; y < imgHeight; y++) {
 			similarityGraph[x].push([])
+			equalityGraph[x].push([])
 			for (var i = 0; i < deltas.length; i++) {
 				var delta = deltas[i]
 				var newX = x + delta[0]
 				var newY = y + delta[1]
 				try { similarityGraph[x][y].push(!dissimilarColors(yuvImage[x][y], yuvImage[newX][newY])) } 
 				catch { similarityGraph[x][y].push(false) }
+				try { equalityGraph[x][y].push(!differentColors(yuvImage[x][y], yuvImage[newX][newY])) } 
+				catch { equalityGraph[x][y].push(false) }
 			}
 		}
 	}
 
 	// detect crossings
+	resolveCrossings(similarityGraph, dissimilarColors, imgWidth, imgHeight)
+	resolveCrossings(equalityGraph, differentColors, imgWidth, imgHeight)
+
+	return {
+		similarityGraph,
+		equalityGraph,
+		yuvImage
+	}
+}
+
+function resolveCrossings(graph, dissimilarityFunction, imgWidth, imgHeight) {
 	
 	for (var x = 0; x < imgWidth-1; x++) {
 		for (var y = 0; y < imgHeight-1; y++) {
 			// detecting the crossing formed by (x,y)comp(x+1,y+1) and (x+1,y)comp(x,y+1)
-			var diag1 = similarityGraph[x][y][deltaDownRight_index]  // (x,y)comp(x+1,y+1)
-			var diag2 = similarityGraph[x+1][y][deltaDownLeft_index] // (x+1,y)comp(x,y+1)
+			var diag1 = graph[x][y][deltaDownRight_index]  // (x,y)comp(x+1,y+1)
+			var diag2 = graph[x+1][y][deltaDownLeft_index] // (x+1,y)comp(x,y+1)
 			var removeDiag1 = false
 			var removeDiag2 = false
 			
 			if (!diag1 || !diag2) continue; // no crossing
 
 			// check for fully connected
-			var fullyConnected = similarityGraph[x][y][deltaRight_index] // if a pixel from one diagonal is similar to a pixel from another diagonal, all four pixels are similar. we can remove both diagonals
+			var fullyConnected = graph[x][y][deltaRight_index] // if a pixel from one diagonal is similar to a pixel from another diagonal, all four pixels are similar. we can remove both diagonals
 			if (fullyConnected)
 				removeDiag1 = removeDiag2 = true
 			else {
@@ -73,8 +89,8 @@ function computeSimilarityGraph(imgWidth, imgHeight, getPixelData) {
 				var diag2SimilarCount = 0
 				for (var dx = -3; dx <= 4; dx++) {
 					for (var dy = -3; dy <= 4; dy++) {
-						try{ if (!dissimilarColors(yuvImage[x][y],   yuvImage[x+dx][y+dy])) diag1SimilarCount++ } catch {} // try/catch to handle trying to access pixels outside the bounds of the image
-						try{ if (!dissimilarColors(yuvImage[x+1][y], yuvImage[x+dx][y+dy])) diag2SimilarCount++ } catch {} // they don't exist (so are always dissimilar), so they'll never contribute to the diagSimilarCount anyway
+						try{ if (!dissimilarityFunction(yuvImage[x][y],   yuvImage[x+dx][y+dy])) diag1SimilarCount++ } catch {} // try/catch to handle trying to access pixels outside the bounds of the image
+						try{ if (!dissimilarityFunction(yuvImage[x+1][y], yuvImage[x+dx][y+dy])) diag2SimilarCount++ } catch {} // they don't exist (so are always dissimilar), so they'll never contribute to the diagSimilarCount anyway
 					}
 				}
 				diag1Score -= AREA_SCORE_WEIGHT*diag1SimilarCount // lower area = we want it connected more
@@ -82,8 +98,8 @@ function computeSimilarityGraph(imgWidth, imgHeight, getPixelData) {
 
 				// islands heuristic
 				
-				var diag1HasIsland = numConnections(similarityGraph[x][y]) == 1 || numConnections(similarityGraph[x+1][y+1]) == 1
-				var diag2HasIsland = numConnections(similarityGraph[x+1][y]) == 1 || numConnections(similarityGraph[x][y+1]) == 1
+				var diag1HasIsland = numConnections(graph[x][y]) == 1 || numConnections(graph[x+1][y+1]) == 1
+				var diag2HasIsland = numConnections(graph[x+1][y]) == 1 || numConnections(graph[x][y+1]) == 1
 
 				if (diag1HasIsland) diag1Score += ISLAND_SCORE
 				if (diag2HasIsland) diag2Score += ISLAND_SCORE
@@ -95,19 +111,14 @@ function computeSimilarityGraph(imgWidth, imgHeight, getPixelData) {
 
 			// remove diagonals marked for removal
 			if (removeDiag1) {
-				similarityGraph[x][y][deltaDownRight_index] = false
-				similarityGraph[x+1][y+1][deltaUpLeft_index] = false
+				graph[x][y][deltaDownRight_index] = false
+				graph[x+1][y+1][deltaUpLeft_index] = false
 			}
 			
 			if (removeDiag2) {
-				similarityGraph[x+1][y][deltaDownLeft_index] = false
-				similarityGraph[x][y+1][deltaUpRight_index] = false
+				graph[x+1][y][deltaDownLeft_index] = false
+				graph[x][y+1][deltaUpRight_index] = false
 			}
 		}
-	}
-
-	return {
-		similarityGraph,
-		yuvImage
 	}
 }

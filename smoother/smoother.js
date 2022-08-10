@@ -11,6 +11,8 @@ const AREA_SCORE_WEIGHT = 1
 
 const pixelSize = 10 // basically the upscale factor
 
+const VORONOI_BETWEEN_SIMILAR_COLORS = false
+
 //
 // non parameter constants (do not touch)
 //
@@ -235,7 +237,7 @@ function init() {
 	// make similarity graph
 	//
 
-	const {similarityGraph, yuvImage} = computeSimilarityGraph(imgWidth, imgHeight, getPixelData);
+	const {similarityGraph, equalityGraph, yuvImage} = computeSimilarityGraph(imgWidth, imgHeight, getPixelData);
 
 	
 	// draw similarity graph
@@ -254,7 +256,12 @@ function init() {
 				var newX = x + delta[0]
 				var newY = y + delta[1]
 				// if (newX < 0 || newX >= imgWidth || newY < 0 || newY >= imgHeight) continue
-				if (similarityGraph[x][y][i] == false) continue;
+				if (VORONOI_BETWEEN_SIMILAR_COLORS
+					? equalityGraph[x][y][i] == false
+					: similarityGraph[x][y][i] == false) {
+					continue;
+				}
+
 				makeLine(similarityGraphSVG, x*pixelSize+pixelSize/2, y*pixelSize+pixelSize/2, newX*pixelSize+pixelSize/2, newY*pixelSize+pixelSize/2)
 			}
 		}
@@ -267,7 +274,7 @@ function init() {
 
 
 
-	const {voronoiVerts} = computeLocalVoronoiVertsPerPixel(similarityGraph, imgWidth, imgHeight);
+	const {voronoiVerts} = computeLocalVoronoiVertsPerPixel(similarityGraph, equalityGraph, imgWidth, imgHeight);
 
 
 	// fix corners where 3 or 4 dissimilar colors meet
@@ -592,8 +599,8 @@ function init() {
 
 						if (i%2 === 0) // this is a diagonal
 							// if xy is connected to this neighbor indirectly, this must be a case where the diagonal was removed between similar colors
-							if (  (!dissimilarColors(yuvImage[x][y], diagPart1A) && !dissimilarColors(diagPart1A, diagPart2)) 
-								||(!dissimilarColors(yuvImage[x][y], diagPart1B) && !dissimilarColors(diagPart1B, diagPart2))) continue; 
+							if (  (!differentColors(yuvImage[x][y], diagPart1A) && !differentColors(diagPart1A, diagPart2)) 
+								||(!differentColors(yuvImage[x][y], diagPart1B) && !differentColors(diagPart1B, diagPart2))) continue; 
 					} catch { continue; } // catch triggers if out of bounds
 
 					var loc = [canvasX, canvasY]
@@ -650,14 +657,14 @@ function init() {
 		 for (const coord of boundaries) { for (const off of pixOff) d32[coord] = d32[coord] || d32[coord+off] } // sometimes boundaries are vertical or horizontal, so we'll just try every neighbor
 
 		 // blur boundaries
-		//  const blurred = {}
-		//  for (const coord of boundaries) { 
-		// 	// blur formula from https://stackoverflow.com/a/8440673/9643841
-		// 	const blur0 = ( ((((coord+pixOff[0]) ^ (coord+pixOff[1])) & 0xfefefefe) >> 1) + ((coord+pixOff[0]) & (coord+pixOff[0])) )
-		// 	const blur1 = ( ((((coord+pixOff[2]) ^ (coord+pixOff[3])) & 0xfefefefe) >> 1) + ((coord+pixOff[2]) & (coord+pixOff[3])) )
-		// 	blurred[coord] = ( ((((blur0) ^ (blur1)) & 0xfefefefe) >> 1) + ((blur0) & (blur1)) )
-		//  }
-		//  for (const coord of boundaries) { d32[coord] = blurred[coord] }
+		 const blurred = {}
+		 for (const coord of boundaries) { 
+			// color averaging formula from https://stackoverflow.com/a/8440673/9643841
+			const blur0 = ( (((d32[coord+pixOff[0]] ^ d32[coord+pixOff[1]]) & 0xfefefefe) >> 1) + (d32[coord+pixOff[0]] & d32[coord+pixOff[1]]) )
+			const blur1 = ( (((d32[coord+pixOff[2]] ^ d32[coord+pixOff[3]]) & 0xfefefefe) >> 1) + (d32[coord+pixOff[2]] & d32[coord+pixOff[3]]) )
+			blurred[coord] = ( ((((blur0) ^ (blur1)) & 0xfefefefe) >> 1) + ((blur0) & (blur1)) )
+		 }
+		 for (const coord of boundaries) { if (blurred[coord]) d32[coord] = blurred[coord] }
 		 
 		 ctx.putImageData(imageData, 0, 0);
 	})();

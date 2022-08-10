@@ -45,6 +45,8 @@ const connectionPatterns_toVoronoiVerts = {
 	
 	"01010111": [1, 5, 9, 13], // shouldn't exist really
 	"01100111": [1, 5, 6, 9, 13], // also shouldn't really exist
+
+	"10110110": [15, 2, 3, 5, 9, 13, 14], // this one actually should exist
 	
 }
 const s = 0.25; // s for step
@@ -85,7 +87,7 @@ const voronoiVertMirror = {
 	14: 15,
 	15: 14,
 }
-function computeLocalVoronoiVertsPerPixel(similarityGraph, imgWidth, imgHeight) {
+function computeLocalVoronoiVertsPerPixel(similarityGraph, equalityGraph, imgWidth, imgHeight) {
 	
 	// for each pixel, represent its list of connections (the value of similarityGraph[x][y]) as a binary string, where the nth bit means this pixel has a connection on the similarity graph to its neighbor n, as represented on the below key:
 	// 0 1 2
@@ -160,7 +162,11 @@ function computeLocalVoronoiVertsPerPixel(similarityGraph, imgWidth, imgHeight) 
 		for (var y = 0; y < imgHeight; y++) {
 			voronoiVerts[x].push([])
 
-			const patternBitstring = connectionArrayToBitString(similarityGraph[x][y])
+			const patternBitstring = connectionArrayToBitString(
+				VORONOI_BETWEEN_SIMILAR_COLORS
+				? equalityGraph[x][y]
+				: similarityGraph[x][y]
+			)
 
 			// test un-mirrored
 
@@ -217,6 +223,10 @@ function heal3ColorMeetings(voronoiVerts, yuvImage, imgWidth, imgHeight) {
 		return true
 	}
 
+	const dissimilarityFunction = VORONOI_BETWEEN_SIMILAR_COLORS
+		? differentColors
+		: dissimilarColors
+
 	// better healing: pick one of the four involved corners to explode
 	// pick the corner with the fewest connections, breaking ties by the angle (eg an acute angle beats a right angle beats a straight line) (11 beats 101/0101 beats 1001 beats 10001)
 	// then, on the exploding corner, find the vertex not shared by any of the four involved pixels. mark this index.
@@ -226,19 +236,19 @@ function heal3ColorMeetings(voronoiVerts, yuvImage, imgWidth, imgHeight) {
 
 	for (var x = 0; x < imgWidth-1; x++) {
 		for (var y = 0; y < imgHeight-1; y++) {
-			if (!dissimilarColors(yuvImage[x][y], yuvImage[x+1][y+1]) || !dissimilarColors(yuvImage[x+1][y], yuvImage[x][y+1])) continue; // don't cross connected diagonals
+			if (!dissimilarityFunction(yuvImage[x][y], yuvImage[x+1][y+1]) || !dissimilarityFunction(yuvImage[x+1][y], yuvImage[x][y+1])) continue; // don't cross connected diagonals
 
 			var dissimilars = []
 			// ignore transparent pixels
-			if (dissimilarColors(yuvImage[x][y], yuvImage[x+1][y])  ) dissimilars.push(yuvImage[x+1][y]  )	
-			if (dissimilarColors(yuvImage[x][y], yuvImage[x][y+1])  ) dissimilars.push(yuvImage[x][y+1]  )	
-			if (dissimilarColors(yuvImage[x][y], yuvImage[x+1][y+1])) dissimilars.push(yuvImage[x+1][y+1])		
+			if (dissimilarityFunction(yuvImage[x][y], yuvImage[x+1][y])  ) dissimilars.push(yuvImage[x+1][y]  )	
+			if (dissimilarityFunction(yuvImage[x][y], yuvImage[x][y+1])  ) dissimilars.push(yuvImage[x][y+1]  )	
+			if (dissimilarityFunction(yuvImage[x][y], yuvImage[x+1][y+1])) dissimilars.push(yuvImage[x+1][y+1])		
 
 			var atLeastThreeDissimilars = false
 			while(dissimilars.length > 0) {
 				var testColor = dissimilars.pop()
 				for (var i = 0; i < dissimilars.length; i++) {
-					if (dissimilarColors(testColor, dissimilars[i])) {
+					if (dissimilarityFunction(testColor, dissimilars[i])) {
 						atLeastThreeDissimilars = true
 						break
 					}
