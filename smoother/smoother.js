@@ -5,7 +5,7 @@
 
 const inputImageElementID = 'my-image';
 
-const ISLAND_SCORE = 13//5
+const ISLAND_SCORE = 13
 const AREA_SCORE_WEIGHT = 1
 
 
@@ -313,7 +313,7 @@ function init() {
 
 	// draw splines between all dissimilar colors, along the voronoi edges they share
 	
-    const { splines, splinesByConstituents, adjacencyList, pointsThatArePartOfContouringSplines, pointsThatArePartOfGhostSplines } = computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, imgWidth, imgHeight, true)
+    const { splines, splinesByConstituents, adjacencyList, pointsThatArePartOfContouringSplines, pointsThatArePartOfGhostSplines, splineLeftSideColor, splineRightSideColor } = computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, imgWidth, imgHeight, getPixelData, true)
 
 	// draw splines approximation (SVG)
 	// this will help me see if the splines were generated correctly
@@ -363,7 +363,7 @@ function init() {
 	// smoothen splines
 	//
 
-	const {splineObjects} = smoothenSplines(splines);
+	const {splineObjects} = smoothenSplines(splines, splineLeftSideColor, splineRightSideColor);
 
 
 	// draw smoothened splines
@@ -373,7 +373,7 @@ function init() {
 	document.body.appendChild(smoothedSplinesCanvas);
 
 	splineObjects.forEach(splineObject => {
-		splineObject.drawToCanvas(smoothedSplinesCanvas.getContext('2d'), false)
+		splineObject.drawToCanvas(smoothedSplinesCanvas.getContext('2d'), true)
 	})
 
 	//
@@ -515,6 +515,13 @@ function init() {
 		const d32 = new Uint32Array(imageData.data.buffer);  
 	
 
+		const start = [
+			// [40 * w + 40, red],  // work in precalculated pixel indexes
+			// [10 * w + 20, green],
+			// [23 * w + 42, blue],
+			// [300 * w +333, yellow],
+			// [200 * w + 333, magenta]
+		];
 
 
 		// draw boundaries
@@ -525,38 +532,91 @@ function init() {
 			for (var i = 0; i < path.length-1; i++) {
 				var vector = [path[i+1][0]-path[i][0], path[i+1][1]-path[i][1]]
 				var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1])
-				var norm = [vector[0]/mag, vector[1]/mag]
+				var dirNormalized = [vector[0]/mag, vector[1]/mag]
 				var magCiel = Math.ceil(mag)
 
 				var loc = [path[i][0], path[i][1]]
-				for (var j = 0; j <= magCiel; j++) {
+				for (var j = 0; j <= magCiel+1; j++) {
 					const indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
 					d32[indx] = clear
 					boundaries.push(indx)
-					loc[0] += norm[0]
-					loc[1] += norm[1]
+					loc[0] += dirNormalized[0]
+					loc[1] += dirNormalized[1]
 				}
 			}
 		})
+		// // seed colors along boundaries
+		// splineObjects.forEach(splineObject => {
+		// 	// canvas.lineTo doesn't support full alpha, so I made my own drawing code
+		// 	var path = splineObject.toPath()
+		// 	for (var i = 0; i < path.length-1; i++) {
+		// 		var vector = [path[i+1][0]-path[i][0], path[i+1][1]-path[i][1]]
+		// 		var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1])
+		// 		var dirNormalized = [vector[0]/mag, vector[1]/mag]
+
+		// 		var loc = [path[i][0], path[i][1]]
+
+		// 		// seed the colors
+		// 		var right = Math.trunc(loc[1]-dirNormalized[0])*w+Math.trunc(loc[0]+dirNormalized[1])
+		// 		var left = Math.trunc(loc[1]+dirNormalized[0])*w+Math.trunc(loc[0]-dirNormalized[1])
+
+		// 		var rightColor = splineObject.rightSideColor
+		// 		var leftColor = splineObject.leftSideColor
+		// 		if (rightColor !== undefined && d32[right] === black) start.push([right, (rightColor[3] << 24) | (rightColor[2] << 16) | (rightColor[1] << 8) | (rightColor[0]) ])
+		// 		if (leftColor  !== undefined && d32[left] === black)  start.push([left,  (leftColor[3] << 24)  | (leftColor[2] << 16)  | (leftColor[1] << 8)  | (leftColor[0])  ])
+		// 	}
+		// })
 
 
 
-		const start = [
-			// [40 * w + 40, red],  // work in precalculated pixel indexes
-			// [10 * w + 20, green],
-			// [23 * w + 42, blue],
-			// [300 * w +333, yellow],
-			// [200 * w + 333, magenta]
-		];
+		
 		
 		// seed the image from the pixel centers
 		for(var x = 0; x < imgWidth; x++) {
 			for(var y = 0; y < imgHeight; y++) {
-				var rgba = getPixelData(x, y)
-				const abgr = (rgba[3] << 24) | (rgba[2] << 16) | (rgba[1] << 8) | (rgba[0])
+				// detect if a pixel is outside its bounds somehow
+
 				const canvasY = y*pixelSize + pixelSize/2 
 				const canvasX = x*pixelSize + pixelSize/2
-				start.push([canvasY*w+canvasX, abgr === black ? notQuiteBlack : abgr])
+				const idx = canvasY*w+canvasX
+				if (d32[idx] !== black) continue
+				
+				// check each of this pixels __unconnected__ neighbors. if any of them can be reached without hitting a boundary (ie clear) pixel, skip this seed, it's a leaked pixel (ie the boundary that's supposed to enclose this pixel has moved, and the pixel is no longer enclosed)
+				var skipSeed = false
+				for (var i = 0; i < deltas.length; i++) {
+					if (similarityGraph[x][y][i]) continue
+					try {
+						const diagPart1A = yuvImage[x+deltas[i][0]][y]
+						const diagPart1B = yuvImage[x][y+deltas[i][1]]
+						const diagPart2 = yuvImage[x+deltas[i][0]][y+deltas[i][1]]
+
+						if (i%2 === 0) // this is a diagonal
+							// if xy is connected to this neighbor indirectly, this must be a case where the diagonal was removed between similar colors
+							if (  (!dissimilarColors(yuvImage[x][y], diagPart1A) && !dissimilarColors(diagPart1A, diagPart2)) 
+								||(!dissimilarColors(yuvImage[x][y], diagPart1B) && !dissimilarColors(diagPart1B, diagPart2))) continue; 
+					} catch { continue; } // catch triggers if out of bounds
+
+					var loc = [canvasX, canvasY]
+					
+					var blocked = false
+					for (var j = 0; j <= pixelSize; j++) {
+						loc[0] += deltas[i][0]
+						var indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
+						if (d32[indx] === clear) { blocked = true; break; }
+
+						loc[1] += deltas[i][1]
+						indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
+						if (d32[indx] === clear) { blocked = true; break; }
+					}
+
+					if (!blocked) { skipSeed = true; break; }
+				}
+
+				if (skipSeed) continue;
+
+				var rgba = getPixelData(x, y)
+				const abgr = (rgba[3] << 24) | (rgba[2] << 16) | (rgba[1] << 8) | (rgba[0])
+				start.push([idx, abgr === black ? notQuiteBlack : abgr])
 			}
 		}
 
@@ -584,8 +644,21 @@ function init() {
 				}
 			}
 		 }
+
+		 // fill in starts and boundaries
 		 for (const pixel of start) { d32[pixel[0]] = pixel[1] }
 		 for (const coord of boundaries) { for (const off of pixOff) d32[coord] = d32[coord] || d32[coord+off] } // sometimes boundaries are vertical or horizontal, so we'll just try every neighbor
+
+		 // blur boundaries
+		//  const blurred = {}
+		//  for (const coord of boundaries) { 
+		// 	// blur formula from https://stackoverflow.com/a/8440673/9643841
+		// 	const blur0 = ( ((((coord+pixOff[0]) ^ (coord+pixOff[1])) & 0xfefefefe) >> 1) + ((coord+pixOff[0]) & (coord+pixOff[0])) )
+		// 	const blur1 = ( ((((coord+pixOff[2]) ^ (coord+pixOff[3])) & 0xfefefefe) >> 1) + ((coord+pixOff[2]) & (coord+pixOff[3])) )
+		// 	blurred[coord] = ( ((((blur0) ^ (blur1)) & 0xfefefefe) >> 1) + ((blur0) & (blur1)) )
+		//  }
+		//  for (const coord of boundaries) { d32[coord] = blurred[coord] }
+		 
 		 ctx.putImageData(imageData, 0, 0);
 	})();
 

@@ -48,11 +48,15 @@ voronoiVertexIndex_to_globallyUniqueIndex[10] = (x,y) => voronoiVertexIndex_to_g
 
 voronoiVertexIndex_to_globallyUniqueIndex[9] = (x,y) => voronoiVertexIndex_to_globallyUniqueIndex[1](x+1,y+1)
 
+
+const cachedPoints = {} // we cache points so that later, if one point is moved, all other points with exactly the same [x,y] are also moved the same. in this implementation, that's desireable
 const globallyUniqueIndex_to_absoluteXY = (index) => {
 	// var voronoiVertexIndex = index % 5
 	// var pixelIndex = Math.floor(index/5)
 	// var pixelX  = pixelIndex % (imgWidth+1)
 	// var pixelY  = Math.floor(pixelIndex / (imgWidth+1))
+
+	if (cachedPoints[index]) return cachedPoints[index]
 
 	var components = index.split(",")
 	var pixelX     = parseInt(components[0])
@@ -67,14 +71,24 @@ const globallyUniqueIndex_to_absoluteXY = (index) => {
 		8:  [0.75, 0.75],
 	}
 
-	return [pixelX+offsets[voronoiVertexIndex][0], pixelY+offsets[voronoiVertexIndex][1]]
+	const point = [pixelX+offsets[voronoiVertexIndex][0], pixelY+offsets[voronoiVertexIndex][1]]
+	cachedPoints[index] = point
+
+	return point
 }
 
-function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, imgWidth, imgHeight, buildGhostSplines=false) {
+function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, imgWidth, imgHeight, getPixelData, buildGhostSplines=false) {
 	// iterate over each pixel and check each of its neighbors for dissimilar pixels
 	// when a pair of dissimilar pixels is found, record any edges that they share. these edges will eventually be stitched together into the splines
-	var pointsThatArePartOfContouringSplines = {}
-	var pointsThatArePartOfGhostSplines = {}
+	
+	var splinePointLeftSidePixel = {}
+	var splinePointRightSidePixel = {}
+	
+	var edgeLeftSidePixel = {}
+	var edgeRightSidePixel = {}
+
+	var pointsThatArePartOfContouringSplines = {} // secondary output
+	var pointsThatArePartOfGhostSplines = {} // secondary output
 	var adjacencyList = {}
 	for (var x = 0; x < imgWidth; x++) {	
 		for (var y = 0; y < imgHeight; y++) {
@@ -124,6 +138,14 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 						pointsThatArePartOfGhostSplines[globalIndex0] = true
 						pointsThatArePartOfGhostSplines[globalIndex1] = true
 					}
+
+					// for later, cache the colors of the two pixels at this point (it may turn out there are three or more different pixels that share this point, but we will disregard this data later if so)
+					edgeLeftSidePixel[globalIndex0+'-'+globalIndex1] = [x,y]
+					edgeRightSidePixel[globalIndex0+'-'+globalIndex1] = [neighborX,neighborY]
+					edgeLeftSidePixel[globalIndex1+'-'+globalIndex0] = [neighborX,neighborY]
+					edgeRightSidePixel[globalIndex1+'-'+globalIndex0] = [x,y]
+					// splinePointLeftSidePixel[globalIndex0] = splinePointLeftSidePixel[globalIndex1] = [neighborX,neighborY] // this is wrong
+					// splinePointRightSidePixel[globalIndex0] = splinePointRightSidePixel[globalIndex1] = [x,y]
 				}
 			}
 		}
@@ -167,7 +189,7 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 		splines.push(spline)
 	})
 
-	// check for edges whose two vertices are both valence3-or-higher nodes
+	// check for and add edges whose two vertices are both valence3-or-higher nodes (these are missed by the above steps)
 	const dontDuplicate = {}
 	valence3Nodes.forEach(point => {
 		const valence3Neighbors = adjacencyList[point].filter(neighbor => adjacencyList[neighbor].length >= 3)
@@ -257,23 +279,28 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 			return
 		}
 
+		// force splines to touch the valence 3 nodes
+		const forceMeet = []
+		for (var i = 0; i < 8; i++)
+			forceMeet.push(point)
+
 		// construct a new spline made by laying the two "to join" splines together end-to-end (and being careful not to introduce any duplicates)
 		var newSpline = []
 		if (joinSpline0[0] == joinSpline1[0]) {
 
-			newSpline = [...joinSpline0, ...joinSpline1.slice(1, joinSpline1.length).reverse()]
+			newSpline = [...joinSpline0, ...forceMeet, ...joinSpline1.slice(1, joinSpline1.length).reverse()]
 
 		} else if (joinSpline0[0] == joinSpline1[joinSpline1.length-1]) {
 			
-			newSpline = [...joinSpline1, ...joinSpline0.slice(1, joinSpline0.length)]
+			newSpline = [...joinSpline1, ...forceMeet, ...joinSpline0.slice(1, joinSpline0.length)]
 
 		} else if (joinSpline0[joinSpline0.length-1] == joinSpline1[0]) {
 			
-			newSpline = [...joinSpline0, ...joinSpline1.slice(1, joinSpline1.length)]
+			newSpline = [...joinSpline0, ...forceMeet, ...joinSpline1.slice(1, joinSpline1.length)]
 
 		} else if (joinSpline0[joinSpline0.length-1] == joinSpline1[joinSpline1.length-1]) {
 			
-			newSpline = [...joinSpline0, ...joinSpline1.reverse().slice(1, joinSpline1.length)]
+			newSpline = [...joinSpline0, ...forceMeet, ...joinSpline1.reverse().slice(1, joinSpline1.length)]
 
 		}
 
@@ -302,11 +329,62 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 	// 	}
 	// })
 
+
+	// record the colors
+	const splineLeftSideColor  = []
+	const splineRightSideColor = []
+	splines.forEach(spline => {
+		var singleLeftColor = true
+		var singleRightColor = true
+		var leftColor = undefined
+		var rightColor = undefined
+
+		for (var i = 0; i < spline.length-1; i++) {
+			var newLeftColor, newRightColor
+
+			if (edgeLeftSidePixel[spline[i]+'-'+spline[i+1]] == undefined) continue
+
+			newLeftColor = getPixelData(...edgeLeftSidePixel[spline[i]+'-'+spline[i+1]]).join(",")
+			newRightColor = getPixelData(...edgeRightSidePixel[spline[i]+'-'+spline[i+1]]).join(",")
+
+			singleLeftColor = singleLeftColor || (leftColor != undefined && leftColor !== newLeftColor)
+			singleRightColor = singleRightColor || (rightColor != undefined && rightColor !== newRightColor)
+
+			leftColor = newLeftColor
+			rightColor = newRightColor
+		}
+		splineLeftSideColor.push(singleLeftColor? leftColor.split(',').map(c => parseInt(c)) : undefined)
+		splineRightSideColor.push(singleRightColor? rightColor.split(',').map(c => parseInt(c)) : undefined)
+
+
+		// var leftPixelCoords = splinePointLeftSidePixel[spline[0]]
+		// var rightPixelCoords = splinePointRightSidePixel[spline[0]]
+		// var leftColor = getPixelData(...leftPixelCoords).join(",")
+		// var rightColor = getPixelData(...rightPixelCoords).join(",")
+
+		// console.log('SPLINE ===============================================================')
+		// spline.forEach(pointIndex => {
+		// 	leftPixelCoords = splinePointLeftSidePixel[pointIndex]
+		// 	rightPixelCoords = splinePointRightSidePixel[pointIndex]
+		// 	var newLeftColor = getPixelData(...leftPixelCoords).join(",")
+		// 	var newRightColor = getPixelData(...rightPixelCoords).join(",")
+
+		// 	console.log(newLeftColor)
+		// 	leftColor = leftColor == newLeftColor ? leftColor : undefined
+		// 	rightColor = rightColor == newRightColor ? rightColor : undefined
+		// })
+
+		// splineLeftSideColor.push(leftColor == undefined? leftColor : leftColor.split(',').map(c => parseInt(c)))
+		// splineRightSideColor.push(rightColor == undefined? rightColor : rightColor.split(',').map(c => parseInt(c)))
+	})
+
 	return {
 		splines,
 		splinesByConstituents,
 		adjacencyList,
 		pointsThatArePartOfContouringSplines,
-		pointsThatArePartOfGhostSplines
+		pointsThatArePartOfGhostSplines,
+		splineLeftSideColor,
+		splineRightSideColor
 	}
 }

@@ -1,10 +1,10 @@
 
-function smoothenSplines(splines) {
-	return smoothenByRandomDeletionAndHighDegree(splines)
+function smoothenSplines(splines, splineLeftSideColor, splineRightSideColor) {
+	return smoothenByRandomDeletionAndHighDegree(splines, splineLeftSideColor, splineRightSideColor)
 }
 
-function smoothenByRandomDeletionAndHighDegree(splines) {
-	const splineObjects = splines.map(splinePointIndexes => {
+function smoothenByRandomDeletionAndHighDegree(splines, splineLeftSideColor, splineRightSideColor) {
+	const splineObjects = splines.map((splinePointIndexes, splineIndex) => {
 		var newIndexes = [...splinePointIndexes]
 		for (var i = 1; i < newIndexes.length-1; i++) {
 			if (newIndexes.length < 8) break;
@@ -14,7 +14,20 @@ function smoothenByRandomDeletionAndHighDegree(splines) {
 		var absolutePoints = newIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i))
 		var absolutePoints_scaled = absolutePoints.map(point => [pixelSize*point[0], pixelSize*point[1]])
 		
-		return new ClampedClosedBSpline(8, absolutePoints_scaled);
+		if (newIndexes.length <= 5 && newIndexes[0] === newIndexes[newIndexes.length-1]) {
+			// this is a tiny closed loop and so we want to expand it 
+			const center = absolutePoints_scaled.reduce(([avgX, avgY], [x, y]) => [avgX + x/newIndexes.length, avgY + y/newIndexes.length], [0,0])
+			absolutePoints_scaled.forEach(point => {
+				point[0] += 0.2*pixelSize*(point[0]-center[0])
+				point[1] += 0.2*pixelSize*(point[1]-center[1])
+			})
+		}
+
+
+		const splineObject = new ClampedClosedBSpline(8, absolutePoints_scaled);
+		splineObject.rightSideColor = splineRightSideColor[splineIndex]
+		splineObject.leftSideColor = splineLeftSideColor[splineIndex]
+		return splineObject
 	})
 
 	return {splineObjects}
