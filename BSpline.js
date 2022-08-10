@@ -13,7 +13,7 @@ class ClampedClosedBSpline {
 		const start = points[0]
 		const end = points[points.length-1]
 		var knotVector = []
-		if (start[0] === end[0] && start[1] === end[1] && points.length >= degree) { // can't have a closed spline that has fewer points than the degree, because that's an edge case and I don't want to implement it
+		if (start[0] === end[0] && start[1] === end[1]/* && points.length >= degree*/) { // can't have a closed spline that has fewer points than the degree, because that's an edge case and I don't want to implement it // I need to implement it :(
 			// to make a closed BSpline, you just need to wrap `degree` number of points at the start and the end
 			// https://math.stackexchange.com/questions/1296954/b-spline-how-to-generate-a-closed-curve-using-uniform-b-spline-curve
 			
@@ -21,9 +21,9 @@ class ClampedClosedBSpline {
 			
 			const newPoints = [...points]
 			for (var i = 0; i < degree; i++) {
-				//newPoints.unshift(points[points.length-(i+1)])
-				newPoints.push(points[i])
-				if(!Array.isArray(points[i])) console.error('non point point')
+				// newPoints.unshift(points[points.length-(i+1)]) // I think this should be commented out
+				newPoints.push(points[i % points.length])
+				if(!Array.isArray(points[i % points.length])) console.error('non point point')
 				//if(!Array.isArray(points[i])) console.log(points[i])
 			}	
 
