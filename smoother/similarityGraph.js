@@ -55,7 +55,7 @@ function computeSimilarityGraph(imgWidth, imgHeight, getPixelData) {
 				var diag1Score = 0
 				var diag2Score = 0
 				
-				function numConnections(nodeConnections) { return nodeConnections.reduce((snowball, snow) => snowball+(snow?1:0), -1) } // -1 accounts for the self connection
+				function numConnections(nodeConnections) { return nodeConnections.reduce((snowball, snow) => snowball+(snow?1:0), 0) }
 				
 				
 				// TODO: implement curve detection (note: make improvement by detecting double lined curves)
