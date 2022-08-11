@@ -1,17 +1,115 @@
+// Colors as 32bit unsigned ints. Order ABGR
+const black = 0xFF000000; // the background color that gets treated as "not yet filled" by the floodfill algorithm
+const notQuiteBlack = 0xFF010101; // a hacky solve for when the image actually contains black pixels 
+const clear = 0x00000000;
+const red = 0xFF0000FF;
+const green = 0xFF00FF00;
+const blue = 0xFFFF0000;
+const yellow = red | green;
+const magenta = red | blue;
 
-	// high performance flood fill from https://codereview.stackexchange.com/a/212994
+function floodfillNormalImage(colorCanvas, splineObjects, imgWidth, imgHeight, deltas, similarityGraph, getPixelData, yuvImage) {
+	const w = imgWidth*pixelSize;
+	const boundaries = []
+
+	floodfill(colorCanvas,
+		(d32) => {
+			// draw boundaries
+			splineObjects.forEach(splineObject => {
+				// canvas.lineTo doesn't support full alpha, so I made my own drawing code
+				var path = splineObject.toPath()
+				for (var i = 0; i < path.length-1; i++) {
+					var vector = [path[i+1][0]-path[i][0], path[i+1][1]-path[i][1]]
+					var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1])
+					var dirNormalized = [vector[0]/mag, vector[1]/mag]
+					var magCiel = Math.ceil(mag)
+
+					var loc = [path[i][0], path[i][1]]
+					for (var j = 0; j <= magCiel+1; j++) {
+						const indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
+						d32[indx] = clear
+						boundaries.push(indx)
+						loc[0] += dirNormalized[0]
+						loc[1] += dirNormalized[1]
+					}
+				}
+			})
+		},
+		(d32) => {
+			const retval = []
+			// seed the image from the pixel centers
+			for(var x = 0; x < imgWidth; x++) {
+				for(var y = 0; y < imgHeight; y++) {
+					// detect if a pixel is outside its bounds somehow
+
+					const canvasY = y*pixelSize + pixelSize/2 
+					const canvasX = x*pixelSize + pixelSize/2
+					const idx = canvasY*w+canvasX
+					if (d32[idx] !== black) continue
+					
+					// check each of this pixels __unconnected__ neighbors. if any of them can be reached without hitting a boundary (ie clear) pixel, skip this seed, it's a leaked pixel (ie the boundary that's supposed to enclose this pixel has moved, and the pixel is no longer enclosed)
+					var skipSeed = false
+					for (var i = 0; i < deltas.length; i++) {
+						if (similarityGraph[x][y][i]) continue
+						try {
+							const diagPart1A = yuvImage[x+deltas[i][0]][y]
+							const diagPart1B = yuvImage[x][y+deltas[i][1]]
+							const diagPart2 = yuvImage[x+deltas[i][0]][y+deltas[i][1]]
+
+							if (i%2 === 0) // this is a diagonal
+								// if xy is connected to this neighbor indirectly, this must be a case where the diagonal was removed between similar colors
+								if (  (!dissimilarColors(yuvImage[x][y], diagPart1A) && !dissimilarColors(diagPart1A, diagPart2)) 
+									||(!dissimilarColors(yuvImage[x][y], diagPart1B) && !dissimilarColors(diagPart1B, diagPart2))) continue; 
+						} catch { continue; } // catch triggers if out of bounds
+
+						var loc = [canvasX, canvasY]
+						
+						var blocked = false
+						for (var j = 0; j <= pixelSize; j++) {
+							loc[0] += deltas[i][0]
+							var indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
+							if (d32[indx] === clear) { blocked = true; break; }
+
+							loc[1] += deltas[i][1]
+							indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
+							if (d32[indx] === clear) { blocked = true; break; }
+						}
+
+						if (!blocked) { skipSeed = true; break; }
+					}
+
+					if (skipSeed) continue;
+
+					var rgba = getPixelData(x, y)
+					const abgr = (rgba[3] << 24) | (rgba[2] << 16) | (rgba[1] << 8) | (rgba[0])
+					retval.push([idx, abgr === black ? notQuiteBlack : abgr])
+				}
+			}
+			return retval
+		},
+		(d32) => {
+			// fill in boundaries
+			const pixOff = [w, -w, 1, -1];  // lookup for pixels left right top bottom
+			for (const coord of boundaries) { for (const off of pixOff) d32[coord] = d32[coord] || d32[coord+off] } // sometimes boundaries are vertical or horizontal, so we'll just try every neighbor
+
+			// blur boundaries
+			//  const blurred = {}
+			//  for (const coord of boundaries) { 
+			// 	// blur formula from https://stackoverflow.com/a/8440673/9643841
+			// 	const blur0 = ( ((((coord+pixOff[0]) ^ (coord+pixOff[1])) & 0xfefefefe) >> 1) + ((coord+pixOff[0]) & (coord+pixOff[0])) )
+			// 	const blur1 = ( ((((coord+pixOff[2]) ^ (coord+pixOff[3])) & 0xfefefefe) >> 1) + ((coord+pixOff[2]) & (coord+pixOff[3])) )
+			// 	blurred[coord] = ( ((((blur0) ^ (blur1)) & 0xfefefefe) >> 1) + ((blur0) & (blur1)) )
+			//  }
+			//  for (const coord of boundaries) { d32[coord] = blurred[coord] }
+				
+		}
+	)
+}
+
+
+// high performance flood fill from https://codereview.stackexchange.com/a/212994
 const floodfill = function (colorCanvas, preseedCallback, seedFunction, cleanupCallback) {
 	"use strict"; // Always for performant code
-
-	// Colors as 32bit unsigned ints. Order ABGR
-	const black = 0xFF000000;
-	const notQuiteBlack = 0xFF010101;
-	const clear = 0x00000000;
-	const red = 0xFF0000FF;
-	const green = 0xFF00FF00;
-	const blue = 0xFFFF0000;
-	const yellow = red | green;
-	const magenta = red | blue;
 
 	const cvs = colorCanvas //document.getElementById("paint");
 	const width = cvs.width;  // Get potencial slow accessors into vars.
