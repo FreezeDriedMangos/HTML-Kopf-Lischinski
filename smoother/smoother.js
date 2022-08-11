@@ -411,6 +411,12 @@ function init() {
 
 
 
+	var dfCanvas = document.createElement('canvas');
+	dfCanvas.width = imgWidth*pixelSize;
+	dfCanvas.height = imgHeight*pixelSize;
+	document.body.appendChild(dfCanvas);
+	floodfillEdgeDistanceFieldImage(dfCanvas, splineObjects, imgWidth)
+
 
 
 	// TODO: gaussian blur

@@ -165,9 +165,60 @@ function floodfillDirectionVectorsImage(colorCanvas, splineObjects, imgWidth) {
 	)
 }
 
+function floodfillEdgeDistanceFieldImage(colorCanvas, splineObjects, imgWidth) {
+	const w = imgWidth*pixelSize;
+	const gradientFalloff = 1/255
 
-// high performance flood fill from https://codereview.stackexchange.com/a/212994
-const floodfill = function (colorCanvas, preseedCallback, seedFunction, cleanupCallback) {
+	floodfill(colorCanvas,
+		(d32) => {},
+		(d32) => {
+			const retval = []
+			const visited = {}
+			// draw boundaries
+			splineObjects.forEach(splineObject => {
+				// canvas.lineTo doesn't support full alpha, so I made my own drawing code
+				var path = splineObject.toPath()
+				for (var i = 0; i < path.length-1; i++) {
+					var vector = [path[i+1][0]-path[i][0], path[i+1][1]-path[i][1]]
+					var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1])
+					var dirNormalized = [vector[0]/mag, vector[1]/mag]
+					var magCiel = Math.ceil(mag)
+
+					const borderColor = 0xffffffff
+
+					var loc = [path[i][0], path[i][1]]
+					for (var j = 0; j <= magCiel; j++) {
+						const indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
+						if (!visited[indx]) {
+							d32[indx] = borderColor
+							retval.push([indx, borderColor])
+							visited[indx] = true
+						}
+						loc[0] += dirNormalized[0]
+						loc[1] += dirNormalized[1]
+					}
+				}
+			})
+			return retval
+		},
+		(d32) => {
+			// blur boundaries
+			//  const blurred = {}
+			//  for (const coord of boundaries) { 
+			// 	// blur formula from https://stackoverflow.com/a/8440673/9643841
+			// 	const blur0 = ( ((((coord+pixOff[0]) ^ (coord+pixOff[1])) & 0xfefefefe) >> 1) + ((coord+pixOff[0]) & (coord+pixOff[0])) )
+			// 	const blur1 = ( ((((coord+pixOff[2]) ^ (coord+pixOff[3])) & 0xfefefefe) >> 1) + ((coord+pixOff[2]) & (coord+pixOff[3])) )
+			// 	blurred[coord] = ( ((((blur0) ^ (blur1)) & 0xfefefefe) >> 1) + ((blur0) & (blur1)) )
+			//  }
+			//  for (const coord of boundaries) { d32[coord] = blurred[coord] }
+		},
+		gradientFalloff
+	)
+}
+
+
+// high performance flood fill modified from https://codereview.stackexchange.com/a/212994
+const floodfill = function (colorCanvas, preseedCallback, seedFunction, cleanupCallback, gradientFalloff) {
 	"use strict"; // Always for performant code
 
 	const cvs = colorCanvas //document.getElementById("paint");
@@ -176,6 +227,8 @@ const floodfill = function (colorCanvas, preseedCallback, seedFunction, cleanupC
 	const height = cvs.height;
 	const size = width * height;
 	const ctx = cvs.getContext('2d');
+
+	const gradient = 0x00FFFFFF * (gradientFalloff || 0); // gradientFalloff is a float on [0-1]
 
 	// black background
 	ctx.fillStyle = "black";
@@ -216,7 +269,7 @@ const floodfill = function (colorCanvas, preseedCallback, seedFunction, cleanupC
 											// will return undefined
 				const xx = x + pixOffX[i];
 				if (xx > -1 && xx < w ) {
-					d32[nIdx] = d32[idx];
+					d32[nIdx] = d32[idx] - gradient;
 					queue.push(nIdx);
 				}
 			}
