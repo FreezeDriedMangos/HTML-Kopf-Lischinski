@@ -373,7 +373,7 @@ function init() {
 	document.body.appendChild(smoothedSplinesCanvas);
 
 	splineObjects.forEach(splineObject => {
-		splineObject.drawToCanvas(smoothedSplinesCanvas.getContext('2d'), true)
+		splineObject.drawToCanvas(smoothedSplinesCanvas.getContext('2d'), false)
 	})
 
 	//
@@ -397,6 +397,13 @@ function init() {
 	colorCanvas.height = imgHeight*pixelSize;
 	document.body.appendChild(colorCanvas);
 	floodfillNormalImage(colorCanvas, splineObjects, imgWidth, imgHeight, deltas, similarityGraph, getPixelData, yuvImage)
+
+
+	var vectorCanvas = document.createElement('canvas');
+	vectorCanvas.width = imgWidth*pixelSize;
+	vectorCanvas.height = imgHeight*pixelSize;
+	document.body.appendChild(vectorCanvas);
+	floodfillDirectionVectorsImage(vectorCanvas, splineObjects, imgWidth)
 
 	// splineObjects.forEach(splineObject => {
 	// 	splineObject.drawToCanvas(colorCanvas.getContext('2d'), false)

@@ -107,6 +107,59 @@ function floodfillNormalImage(colorCanvas, splineObjects, imgWidth, imgHeight, d
 }
 
 
+function floodfillDirectionVectorsImage(colorCanvas, splineObjects, imgWidth) {
+	const w = imgWidth*pixelSize;
+
+	floodfill(colorCanvas,
+		(d32) => {},
+		(d32) => {
+			const retval = []
+			const visited = {}
+			// draw boundaries
+			splineObjects.forEach(splineObject => {
+				// canvas.lineTo doesn't support full alpha, so I made my own drawing code
+				var path = splineObject.toPath()
+				for (var i = 0; i < path.length-1; i++) {
+					var vector = [path[i+1][0]-path[i][0], path[i+1][1]-path[i][1]]
+					var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1])
+					var dirNormalized = [vector[0]/mag, vector[1]/mag]
+					var magCiel = Math.ceil(mag)
+
+					var dirNormalized_ClampSpace = [dirNormalized[0]*0.5+0.5, dirNormalized[1]*0.5+0.5]
+					if (dirNormalized_ClampSpace[0] < 0 || dirNormalized_ClampSpace[0] > 1 || 
+						dirNormalized_ClampSpace[1] < 0 || dirNormalized_ClampSpace[1] > 1) console.log(dirNormalized_ClampSpace)
+					const dirColor = ((Math.trunc(0xff * dirNormalized_ClampSpace[0]) << 0) | (Math.trunc(0xff * dirNormalized_ClampSpace[1]) << 8) | 0xff880000) >>> 0 // note: the >>> 0 makes this an unsigned int
+
+					var loc = [path[i][0], path[i][1]]
+					for (var j = 0; j <= magCiel; j++) {
+						const indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
+						if (!visited[indx]) {
+							d32[indx] = dirColor
+							retval.push([indx, dirColor])
+							visited[indx] = true
+						}
+						loc[0] += dirNormalized[0]
+						loc[1] += dirNormalized[1]
+					}
+				}
+			})
+			return retval
+		},
+		(d32) => {
+			// blur boundaries
+			//  const blurred = {}
+			//  for (const coord of boundaries) { 
+			// 	// blur formula from https://stackoverflow.com/a/8440673/9643841
+			// 	const blur0 = ( ((((coord+pixOff[0]) ^ (coord+pixOff[1])) & 0xfefefefe) >> 1) + ((coord+pixOff[0]) & (coord+pixOff[0])) )
+			// 	const blur1 = ( ((((coord+pixOff[2]) ^ (coord+pixOff[3])) & 0xfefefefe) >> 1) + ((coord+pixOff[2]) & (coord+pixOff[3])) )
+			// 	blurred[coord] = ( ((((blur0) ^ (blur1)) & 0xfefefefe) >> 1) + ((blur0) & (blur1)) )
+			//  }
+			//  for (const coord of boundaries) { d32[coord] = blurred[coord] }
+		}
+	)
+}
+
+
 // high performance flood fill from https://codereview.stackexchange.com/a/212994
 const floodfill = function (colorCanvas, preseedCallback, seedFunction, cleanupCallback) {
 	"use strict"; // Always for performant code
