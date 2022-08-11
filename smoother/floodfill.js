@@ -128,7 +128,13 @@ function floodfillDirectionVectorsImage(colorCanvas, splineObjects, imgWidth) {
 					var dirNormalized_ClampSpace = [dirNormalized[0]*0.5+0.5, dirNormalized[1]*0.5+0.5]
 					if (dirNormalized_ClampSpace[0] < 0 || dirNormalized_ClampSpace[0] > 1 || 
 						dirNormalized_ClampSpace[1] < 0 || dirNormalized_ClampSpace[1] > 1) console.log(dirNormalized_ClampSpace)
-					const dirColor = ((Math.trunc(0xff * dirNormalized_ClampSpace[0]) << 0) | (Math.trunc(0xff * dirNormalized_ClampSpace[1]) << 8) | 0xff880000) >>> 0 // note: the >>> 0 makes this an unsigned int
+
+				    // vector dir color
+					const zeroColor = 0xff000000 //0xff880000
+					const dirColor = ((Math.trunc(0xff * dirNormalized_ClampSpace[0]) << 0) | (Math.trunc(0xff * dirNormalized_ClampSpace[1]) << 8) | zeroColor) >>> 0 // note: the >>> 0 makes this an unsigned int
+					
+					// // angle dir color
+					// const dirColor = 0xff010000 | Math.trunc(0xff * Math.atan2(dirNormalized_ClampSpace[1], dirNormalized_ClampSpace[0])/(2*Math.PI)) 
 
 					var loc = [path[i][0], path[i][1]]
 					for (var j = 0; j <= magCiel; j++) {
