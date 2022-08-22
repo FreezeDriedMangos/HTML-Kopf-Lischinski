@@ -58,8 +58,8 @@ function floodfillNormalImage(colorCanvas, splineObjects, imgWidth, imgHeight, d
 
 							if (i%2 === 0) // this is a diagonal
 								// if xy is connected to this neighbor indirectly, this must be a case where the diagonal was removed between similar colors
-								if (  (!dissimilarColors(yuvImage[x][y], diagPart1A) && !dissimilarColors(diagPart1A, diagPart2)) 
-									||(!dissimilarColors(yuvImage[x][y], diagPart1B) && !dissimilarColors(diagPart1B, diagPart2))) continue; 
+								if (  (!differentColors(yuvImage[x][y], diagPart1A) && !differentColors(diagPart1A, diagPart2)) 
+									||(!differentColors(yuvImage[x][y], diagPart1B) && !differentColors(diagPart1B, diagPart2))) continue; 
 						} catch { continue; } // catch triggers if out of bounds
 
 						var loc = [canvasX, canvasY]

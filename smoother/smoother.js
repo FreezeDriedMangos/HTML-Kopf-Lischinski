@@ -313,7 +313,7 @@ function init() {
 
 	// draw splines between all dissimilar colors, along the voronoi edges they share
 	
-    const { splines, splinesByConstituents, adjacencyList, pointsThatArePartOfContouringSplines, pointsThatArePartOfGhostSplines, splineLeftSideColor, splineRightSideColor } = computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, imgWidth, imgHeight, getPixelData, true)
+    const { splines, splinesByConstituents, adjacencyList, pointsThatArePartOfContouringSplines, pointsThatArePartOfGhostSplines } = computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, imgWidth, imgHeight, getPixelData, true)
 
 	// draw splines approximation (SVG)
 	// this will help me see if the splines were generated correctly
@@ -363,7 +363,7 @@ function init() {
 	// smoothen splines
 	//
 
-	const {splineObjects} = smoothenSplines(splines, splineLeftSideColor, splineRightSideColor);
+	const {splineObjects} = smoothenSplines(splines);
 
 
 	// draw smoothened splines

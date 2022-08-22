@@ -1,9 +1,9 @@
 
-function smoothenSplines(splines, splineLeftSideColor, splineRightSideColor) {
-	return smoothenByRandomDeletionAndHighDegree(splines, splineLeftSideColor, splineRightSideColor)
+function smoothenSplines(splines) {
+	return smoothenByRandomDeletionAndHighDegree(splines)
 }
 
-function smoothenByRandomDeletionAndHighDegree(splines, splineLeftSideColor, splineRightSideColor) {
+function smoothenByRandomDeletionAndHighDegree(splines) {
 	const splineObjects = splines.map((splinePointIndexes, splineIndex) => {
 		var newIndexes = [...splinePointIndexes]
 		for (var i = 1; i < newIndexes.length-1; i++) {
@@ -25,8 +25,6 @@ function smoothenByRandomDeletionAndHighDegree(splines, splineLeftSideColor, spl
 
 
 		const splineObject = new ClampedClosedBSpline(8, absolutePoints_scaled);
-		splineObject.rightSideColor = splineRightSideColor[splineIndex]
-		splineObject.leftSideColor = splineLeftSideColor[splineIndex]
 		return splineObject
 	})
 

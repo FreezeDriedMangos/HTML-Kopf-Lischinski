@@ -80,12 +80,6 @@ const globallyUniqueIndex_to_absoluteXY = (index) => {
 function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, imgWidth, imgHeight, getPixelData, buildGhostSplines=false) {
 	// iterate over each pixel and check each of its neighbors for dissimilar pixels
 	// when a pair of dissimilar pixels is found, record any edges that they share. these edges will eventually be stitched together into the splines
-	
-	var splinePointLeftSidePixel = {}
-	var splinePointRightSidePixel = {}
-	
-	var edgeLeftSidePixel = {}
-	var edgeRightSidePixel = {}
 
 	var pointsThatArePartOfContouringSplines = {} // secondary output
 	var pointsThatArePartOfGhostSplines = {} // secondary output
@@ -138,14 +132,6 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 						pointsThatArePartOfGhostSplines[globalIndex0] = true
 						pointsThatArePartOfGhostSplines[globalIndex1] = true
 					}
-
-					// for later, cache the colors of the two pixels at this point (it may turn out there are three or more different pixels that share this point, but we will disregard this data later if so)
-					edgeLeftSidePixel[globalIndex0+'-'+globalIndex1] = [x,y]
-					edgeRightSidePixel[globalIndex0+'-'+globalIndex1] = [neighborX,neighborY]
-					edgeLeftSidePixel[globalIndex1+'-'+globalIndex0] = [neighborX,neighborY]
-					edgeRightSidePixel[globalIndex1+'-'+globalIndex0] = [x,y]
-					// splinePointLeftSidePixel[globalIndex0] = splinePointLeftSidePixel[globalIndex1] = [neighborX,neighborY] // this is wrong
-					// splinePointRightSidePixel[globalIndex0] = splinePointRightSidePixel[globalIndex1] = [x,y]
 				}
 			}
 		}
@@ -207,7 +193,38 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 			if (!splinesByConstituents[neighbor]) splinesByConstituents[neighbor] = spline
 			if (!splinesByConstituents[point])    splinesByConstituents[point]    = spline
 		})
+
+		// new code: stick this point on the end of every spline (made of valence 2 nodes) whose endpoint it's adjacent to
+		const valence2Neighbors = adjacencyList[point].filter(neighbor => adjacencyList[neighbor].length < 3)
+		valence2Neighbors.forEach(neighbor => {
+			const spline = splinesByConstituents[neighbor]
+			if (neighbor == spline[0]) spline.unshift(point)
+			else if (neighbor == spline[spline.length-1]) spline.push(point)
+			else console.error("point is adjacent to a valence 2 node in the middle of another spline? (impossible)")
+		})
 	})
+
+
+
+
+	
+	return {
+		splines,
+		splinesByConstituents,
+		adjacencyList,
+		pointsThatArePartOfContouringSplines,
+		pointsThatArePartOfGhostSplines,
+	}
+
+
+	//
+	// TODO: below code is invalid as a result of the "new code:" above
+	// TODO: rewrite the "join splines where they meet at valence 3/4 nodes" code
+	// TODO: I believe this will require recording what EDGES are contour/ghost edges, rather than which points
+	//
+
+
+
 
 	// helper function from https://stackoverflow.com/a/53107778/9643841
 	const pairsOfArray = array => (
@@ -329,62 +346,88 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 	// 	}
 	// })
 
-
-	// record the colors
-	const splineLeftSideColor  = []
-	const splineRightSideColor = []
-	splines.forEach(spline => {
-		var singleLeftColor = true
-		var singleRightColor = true
-		var leftColor = undefined
-		var rightColor = undefined
-
-		for (var i = 0; i < spline.length-1; i++) {
-			var newLeftColor, newRightColor
-
-			if (edgeLeftSidePixel[spline[i]+'-'+spline[i+1]] == undefined) continue
-
-			newLeftColor = getPixelData(...edgeLeftSidePixel[spline[i]+'-'+spline[i+1]]).join(",")
-			newRightColor = getPixelData(...edgeRightSidePixel[spline[i]+'-'+spline[i+1]]).join(",")
-
-			singleLeftColor = singleLeftColor || (leftColor != undefined && leftColor !== newLeftColor)
-			singleRightColor = singleRightColor || (rightColor != undefined && rightColor !== newRightColor)
-
-			leftColor = newLeftColor
-			rightColor = newRightColor
-		}
-		splineLeftSideColor.push(singleLeftColor? leftColor.split(',').map(c => parseInt(c)) : undefined)
-		splineRightSideColor.push(singleRightColor? rightColor.split(',').map(c => parseInt(c)) : undefined)
-
-
-		// var leftPixelCoords = splinePointLeftSidePixel[spline[0]]
-		// var rightPixelCoords = splinePointRightSidePixel[spline[0]]
-		// var leftColor = getPixelData(...leftPixelCoords).join(",")
-		// var rightColor = getPixelData(...rightPixelCoords).join(",")
-
-		// console.log('SPLINE ===============================================================')
-		// spline.forEach(pointIndex => {
-		// 	leftPixelCoords = splinePointLeftSidePixel[pointIndex]
-		// 	rightPixelCoords = splinePointRightSidePixel[pointIndex]
-		// 	var newLeftColor = getPixelData(...leftPixelCoords).join(",")
-		// 	var newRightColor = getPixelData(...rightPixelCoords).join(",")
-
-		// 	console.log(newLeftColor)
-		// 	leftColor = leftColor == newLeftColor ? leftColor : undefined
-		// 	rightColor = rightColor == newRightColor ? rightColor : undefined
-		// })
-
-		// splineLeftSideColor.push(leftColor == undefined? leftColor : leftColor.split(',').map(c => parseInt(c)))
-		// splineRightSideColor.push(rightColor == undefined? rightColor : rightColor.split(',').map(c => parseInt(c)))
-	})
-
 	return {
 		splines,
 		splinesByConstituents,
 		adjacencyList,
 		pointsThatArePartOfContouringSplines,
 		pointsThatArePartOfGhostSplines,
-		splineLeftSideColor,
-		splineRightSideColor
 	}
 }
+
+
+
+
+
+
+
+
+function computeSplinesByGlobalIndices_EDGE_METHOD(similarityGraph, voronoiVerts, yuvImage, imgWidth, imgHeight, getPixelData, buildGhostSplines=false) {
+	var adjacencyList = {}
+
+	var edges = []
+	var edgesByVertex = {}
+
+	for (var x = 0; x < imgWidth; x++) {	
+		for (var y = 0; y < imgHeight; y++) {
+			var thisPixelVoronoiVerts = null
+			
+			thisPixelVoronoiVerts = [...voronoiVerts[x][y], voronoiVerts[x][y][0]].map(vert => voronoiVertexIndex_to_globallyUniqueIndex[vert](x, y)) 
+
+			for (var q = 0; q < nextNeighbors.length; q++) { // we'll only consider neighbors 0, 1, 2, and 3 in order to prevent duplicates. the pixels before this one will have 7 covered, and the pixels below will cover 4, 5, and 6
+				var i = nextNeighbors[q]
+				if (similarityGraph[x][y][i] && !(buildGhostSplines && differentColors(yuvImage[x][y], yuvImage[x+deltas[i][0]][y+deltas[i][1]]))) continue; // no splines exist on the boundries of similar pixels, unless we're building ghost splines
+
+				var neighborX = x+deltas[i][0]
+				var neighborY = y+deltas[i][1]
+				if (neighborX < 0 || neighborX >= imgWidth || neighborY < 0 || neighborY >= imgHeight) continue
+
+				// iterate over all of this pixels voronoi vertices (in global index form, rather than in pixel-relative index form)
+				var neighborVerts = voronoiVerts[neighborX][neighborY]
+				var neighborVerts = [...neighborVerts].map(vert => voronoiVertexIndex_to_globallyUniqueIndex[vert](neighborX, neighborY))
+				for (var i = 0; i < thisPixelVoronoiVerts.length-1; i++) {
+					var globalIndex0 = thisPixelVoronoiVerts[i]
+					var globalIndex1 = thisPixelVoronoiVerts[i+1]
+
+					// check to see if this neighbor has edge (globalIndex0, globalIndex1)
+					try { 
+						var idx = neighborVerts.indexOf(globalIndex0) 
+						if (idx === -1) continue
+						var idxMinus1 = idx === 0 ? neighborVerts.length-1 : idx-1
+						var idxPlus1 = idx === neighborVerts.length-1 ? 0 : idx+1
+						var edgeIsShared = false
+						if (neighborVerts[idxPlus1] == globalIndex1 || neighborVerts[idxMinus1] == globalIndex1) edgeIsShared = true
+
+						if (!edgeIsShared) continue
+					} catch { continue }
+
+					// the two dissimilar pixels do share this edge, so add this edge to the adjacency list
+					if (!adjacencyList[globalIndex0]) adjacencyList[globalIndex0] = []
+					if (!adjacencyList[globalIndex1]) adjacencyList[globalIndex1] = []
+
+					if (!adjacencyList[globalIndex0].includes(globalIndex1)) adjacencyList[globalIndex0].push(globalIndex1)
+					if (!adjacencyList[globalIndex1].includes(globalIndex0)) adjacencyList[globalIndex1].push(globalIndex0)
+
+					const edge = {vert0: globalIndex0, vert1: globalIndex1}
+					edges.push(edge)
+					edgesByVertex[globalIndex0] = edgesByVertex[globalIndex0] || []
+					edgesByVertex[globalIndex1] = edgesByVertex[globalIndex1] || []
+					edgesByVertex[globalIndex0].push(edge)
+					edgesByVertex[globalIndex1].push(edge)
+
+					// for later, cache whether this edge will eventually be part of a "contour" spline. that is, a spline that separates two VERY dissimilar colors
+					if (veryDissimilarColors(yuvImage[x][y], yuvImage[neighborX][neighborY])) {
+						pointsThatArePartOfContouringSplines[globalIndex0] = true
+						pointsThatArePartOfContouringSplines[globalIndex1] = true
+					} else if (!dissimilarColors(yuvImage[x][y], yuvImage[neighborX][neighborY])){
+						pointsThatArePartOfGhostSplines[globalIndex0] = true
+						pointsThatArePartOfGhostSplines[globalIndex1] = true
+					}
+				}
+			}
+		}
+	}
+
+	// for each edge, determine which spline it should be added to
+}
+
