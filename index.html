@@ -20,7 +20,10 @@
 	<img id='my-image' style='display: none;'>
 	<br>
 
-	<br/>TODO: add an input box for upscale factor (in the code the variable is pixelSize) <br/><br/>
+	<br/>
+	<input type="number" id="upscaleFactor" name="upscaleFactor" min="1" max="50" placeholder="10" onchange="upscaleFactorChanged(event)">
+	<br/>
+	<br/>
 
 	<input type="radio" id="raw (svg)" name="render type" onchange="renderTypeSelected(event)">
 	<label for="raw (svg)">raw (svg)</label><br>

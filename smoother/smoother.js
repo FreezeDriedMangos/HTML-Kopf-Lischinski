@@ -9,7 +9,7 @@ const ISLAND_SCORE = 13
 const AREA_SCORE_WEIGHT = 1
 
 
-const pixelSize = 10 // basically the upscale factor
+var pixelSize = 10 // basically the upscale factor
 
 //
 // non parameter constants (do not touch)

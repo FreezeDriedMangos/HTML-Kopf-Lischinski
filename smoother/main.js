@@ -7,7 +7,7 @@ var selected = 'raw (svg)'
 var showSimilarityGraph = false
 
 // cached graphics data
-const canvases = {}
+var canvases = {}
 
 // computation results
 var computation_similarityGraph = {}
@@ -188,6 +188,17 @@ function renderTypeSelected(event) {
 function renderSimilarityGraphToggled(event) {
 	showSimilarityGraph = !showSimilarityGraph
 	if (selected.match(/\(.*\)/g)[0] === "(svg)") rerender()
+}
+
+function upscaleFactorChanged(event) {
+	try {
+		pixelSize = Math.floor(Number.parseFloat(event.target.value))
+		
+		Object.values(canvases).forEach(canvas => canvas.remove())
+		canvases = {} // canvases need to be rebuilt with the new size
+		
+		rerender()
+	} catch {}
 }
 
 function main() {
