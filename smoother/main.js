@@ -1,10 +1,25 @@
 
+// state data
 var hasLoaded = false
 
+// graphics settings
 var selected = 'raw (svg)'
 var showSimilarityGraph = false
-var similarityGraphComputationResults = {}
+
+// cached graphics data
 const canvases = {}
+
+// computation results
+var computation_similarityGraph = {}
+var computation_voronoi = {}
+var computation_splines = {}
+var computation_smothenedSplines = {}
+
+// computation settings
+var HEAL_3_COLOR_MEETINGS = true
+// var pixelSize // exists in smoother.js
+
+
 
 function rerender(partial=true) {
 	// init canvas (if necessary)
@@ -25,37 +40,70 @@ function rerender(partial=true) {
 
 	// rerender
 	rerender_withoutOverlays(canvas, partial)
-	if (showSimilarityGraph && selected.match(/\(.*\)/g)[0] === "(svg)") drawSimilarityGraphToSVGCanvas(canvas, imgWidth, imgHeight, similarityGraphComputationResults.similarityGraph)
+	if (showSimilarityGraph && selected.match(/\(.*\)/g)[0] === "(svg)") drawSimilarityGraphToSVGCanvas(canvas, imgWidth, imgHeight, computation_similarityGraph.similarityGraph)
 }
 
-// TODO: save all these computation results as global variables, so they only need to be recomputed when needed
-function rerender_withoutOverlays(canvas, partial=true) {
-	if (selected === 'raw (svg)') {
-		drawInputToSVGCanvas(canvas, imgWidth, imgHeight)
-		console.log('drew input')
-		if (partial) return
-	}
-	
-	
+function compute(stoppingPoint) {
 	//
 	// make similarity graph
 	//
 
-	similarityGraphComputationResults = computeSimilarityGraph(imgWidth, imgHeight, getPixelData);
-	const {similarityGraph, yuvImage} = similarityGraphComputationResults
+	computation_similarityGraph = computeSimilarityGraph(imgWidth, imgHeight, getPixelData);
+	const {similarityGraph, yuvImage} = computation_similarityGraph
 	
+	if (stoppingPoint === 'similarity graph (svg)') return
 
 	//
 	// Converting from similarity graph to voronoi diagram
 	//
 
-	const {voronoiVerts} = computeLocalVoronoiVertsPerPixel(similarityGraph, imgWidth, imgHeight);
-
-	// fix corners where 3 or 4 dissimilar colors meet
-	const HEAL_3_COLOR_MEETINGS = true; 
+	computation_voronoi = computeLocalVoronoiVertsPerPixel(similarityGraph, imgWidth, imgHeight);
+	const {voronoiVerts} = computation_voronoi
 	if (HEAL_3_COLOR_MEETINGS) heal3ColorMeetings(voronoiVerts, yuvImage, imgWidth, imgHeight)
 
+
+	if (stoppingPoint === 'voronoi (svg)') return
+
+	//
+	// splines
+	//
+
+	// draw splines between all dissimilar colors, along the voronoi edges they share
+	
+    computation_splines = computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, imgWidth, imgHeight, getPixelData, true)
+
+	if (stoppingPoint === 'splines (svg)') return
+	if (stoppingPoint === 'splines (raster)') return
+
+	//
+	// smoothen splines
+	//
+
+	computation_smothenedSplines = smoothenSplines(computation_splines.splines);
+
+	// draw smoothened splines
+	if (stoppingPoint === 'smooth splines (raster)') return
+}
+
+function rerender_withoutOverlays(canvas, partial=true) {
+
+	const {similarityGraph, yuvImage} = computation_similarityGraph
+	const {voronoiVerts} = computation_voronoi
+	const {splineObjects} = computation_smothenedSplines
+
+	//
+	// raw input
+	//
+
+	if (selected === 'raw (svg)') {
+		drawInputToSVGCanvas(canvas, imgWidth, imgHeight)
+		if (partial) return
+	}
+	
+	//
 	// draw voronoi :)
+	//
+
 	if (selected === 'voronoi (svg)') {
 		drawVoronoiToSVGCanvas(canvas, imgWidth, imgHeight, voronoiVerts, voronoiCellVertexPositions)
 		if (partial) return
@@ -66,28 +114,21 @@ function rerender_withoutOverlays(canvas, partial=true) {
 	// splines
 	//
 
-	// draw splines between all dissimilar colors, along the voronoi edges they share
-	
-    const splinesComputation = computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, imgWidth, imgHeight, getPixelData, true)
-
 	// draw splines approximation (SVG)
 	if (selected === 'splines (svg)') {
-		drawSplinesToSVGCanvas(canvas, splinesComputation)
+		drawSplinesToSVGCanvas(canvas, computation_splines)
 		if (partial) return
 	}
 
 	// draw splines
 	if (selected === 'splines (raster)') {
-		drawSplinesToRasterCanvas(canvas, splinesComputation)
+		drawSplinesToRasterCanvas(canvas, computation_splines)
 		if (partial) return
 	}
 
 	//
 	// smoothen splines
 	//
-
-	const {splineObjects} = smoothenSplines(splinesComputation.splines);
-
 
 	// draw smoothened splines
 	if (selected === 'smooth splines (raster)') {
@@ -100,7 +141,6 @@ function rerender_withoutOverlays(canvas, partial=true) {
 	// color the image
 	//
 	//
-
 
 
 	// TODO: compute ALL splines, not just splines between dissimilarColors. Compute splines between similar colors too.
@@ -139,7 +179,7 @@ function renderTypeSelected(event) {
 	if (!canvases[selected]) 
 	{
 		rerender()
-		event.target.styles.color = 'green' // ??? show the user that this type has been rendered
+		event.target.style.color = 'green' // ??? show the user that this type has been rendered
 	}
 
 	if (canvases[selected]) canvases[selected].style.display = 'block'
@@ -151,6 +191,7 @@ function renderSimilarityGraphToggled(event) {
 }
 
 function main() {
+	compute()
     rerender()
 
 	hasLoaded = true
