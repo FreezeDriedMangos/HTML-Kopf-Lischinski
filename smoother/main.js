@@ -15,8 +15,6 @@ function rerender(partial=true) {
 			: initRaster(imgWidth*pixelSize, imgHeight*pixelSize)
 
 		canvases[selected].id = selected + " canvas"
-
-		console.log(selected.match(/\(.*\)/g))
 	}
 	
 	const canvas = canvases[selected]
@@ -27,7 +25,7 @@ function rerender(partial=true) {
 
 	// rerender
 	rerender_withoutOverlays(canvas, partial)
-	if (showSimilarityGraph) drawSimilarityGraphToSVGCanvas(canvas, imgWidth, imgHeight, similarityGraphComputationResults.similarityGraph)
+	if (showSimilarityGraph && selected.match(/\(.*\)/g)[0] === "(svg)") drawSimilarityGraphToSVGCanvas(canvas, imgWidth, imgHeight, similarityGraphComputationResults.similarityGraph)
 }
 
 // TODO: save all these computation results as global variables, so they only need to be recomputed when needed
