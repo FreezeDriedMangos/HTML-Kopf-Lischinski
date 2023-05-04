@@ -17,9 +17,10 @@
 <body>
 	<div id="warning"></div>
 	<input type='file' accept='image/*' onchange='openFile(event)'>
-	<img id='my-image'>
+	<img id='my-image' style='display: none;'>
 	<br>
-	
+
+	<br/>TODO: add an input box for upscale factor (in the code the variable is pixelSize) <br/><br/>
 
 	<input type="radio" id="raw (svg)" name="render type" onchange="renderTypeSelected(event)">
 	<label for="raw (svg)">raw (svg)</label><br>
@@ -61,5 +62,8 @@
 	<button onclick="rerender()">
 		Rerender
 	</button>
+	
+	<br/>
+	<br/>
 
 </body>
