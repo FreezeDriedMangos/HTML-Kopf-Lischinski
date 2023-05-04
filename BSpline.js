@@ -170,7 +170,7 @@ class ClampedClosedBSpline {
 
 	
 	// modified from https://github.com/Tagussan/BSpline/blob/master/main.js
-	toPath() {
+	toPath(scale=1) {
 		const path = [];
 
 		var x,y;
@@ -178,7 +178,7 @@ class ClampedClosedBSpline {
 			var interpol = this.evaluate(t);
 			x = interpol[0];
 			y = interpol[1];
-			path.push([x, y])
+			path.push([x*scale, y*scale])
 		}
 
 		return path

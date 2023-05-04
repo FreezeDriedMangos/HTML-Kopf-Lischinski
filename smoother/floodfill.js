@@ -17,7 +17,7 @@ function floodfillNormalImage(colorCanvas, splineObjects, imgWidth, imgHeight, d
 			// draw boundaries
 			splineObjects.forEach(splineObject => {
 				// canvas.lineTo doesn't support full alpha, so I made my own drawing code
-				var path = splineObject.toPath()
+				var path = splineObject.toPath(pixelSize)
 				for (var i = 0; i < path.length-1; i++) {
 					var vector = [path[i+1][0]-path[i][0], path[i+1][1]-path[i][1]]
 					var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1])
@@ -118,7 +118,7 @@ function floodfillDirectionVectorsImage(colorCanvas, splineObjects, imgWidth) {
 			// draw boundaries
 			splineObjects.forEach(splineObject => {
 				// canvas.lineTo doesn't support full alpha, so I made my own drawing code
-				var path = splineObject.toPath()
+				var path = splineObject.toPath(pixelSize)
 				for (var i = 0; i < path.length-1; i++) {
 					var vector = [path[i+1][0]-path[i][0], path[i+1][1]-path[i][1]]
 					var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1])
@@ -177,7 +177,7 @@ function floodfillEdgeDistanceFieldImage(colorCanvas, splineObjects, imgWidth) {
 			// draw boundaries
 			splineObjects.forEach(splineObject => {
 				// canvas.lineTo doesn't support full alpha, so I made my own drawing code
-				var path = splineObject.toPath()
+				var path = splineObject.toPath(pixelSize)
 				for (var i = 0; i < path.length-1; i++) {
 					var vector = [path[i+1][0]-path[i][0], path[i+1][1]-path[i][1]]
 					var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1])
