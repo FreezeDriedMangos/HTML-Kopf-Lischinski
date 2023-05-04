@@ -210,6 +210,8 @@ function upscaleFactorChanged(event) {
 function main() {
 	selected = 'raw (svg)'
 	document.getElementById('raw (svg)').checked = true
+	document.getElementById('drawSimilarityGraph').checked = showSimilarityGraph
+	document.getElementById('blurBoundries').checked = blurBoundries
 
 	compute()
     rerender()
