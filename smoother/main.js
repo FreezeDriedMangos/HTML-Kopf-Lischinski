@@ -187,12 +187,12 @@ function renderTypeSelected(event) {
 }
 
 function renderSimilarityGraphToggled(event) {
-	showSimilarityGraph = !showSimilarityGraph
+	showSimilarityGraph = event.target.checked
 	if (selected.match(/\(.*\)/g)[0] === "(svg)") rerender()
 }
 
 function blurBoundriesToggled(event) {
-	blurBoundries = !blurBoundries
+	blurBoundries = event.target.checked
 	if (selected.match(/\(.*\)/g)[0] === "(raster)") rerender()
 }
 
