@@ -147,7 +147,7 @@ function renderTypeSelected(event) {
 
 function renderSimilarityGraphToggled(event) {
 	showSimilarityGraph = !showSimilarityGraph
-	rerender()
+	if (selected.match(/\(.*\)/g)[0] === "(svg)") rerender()
 }
 
 function main() {
