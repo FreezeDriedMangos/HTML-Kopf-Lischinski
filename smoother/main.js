@@ -196,7 +196,7 @@ function upscaleFactorChanged(event) {
 		
 		Object.values(canvases).forEach(canvas => canvas.remove())
 		canvases = {} // canvases need to be rebuilt with the new size
-		
+
 		rerender()
 	} catch {}
 }

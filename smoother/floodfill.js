@@ -8,7 +8,7 @@ const blue = 0xFFFF0000;
 const yellow = red | green;
 const magenta = red | blue;
 
-function floodfillNormalImage(colorCanvas, splineObjects, imgWidth, imgHeight, deltas, similarityGraph, getPixelData, yuvImage) {
+function floodfillNormalImage(colorCanvas, splineObjects, imgWidth, imgHeight, deltas, similarityGraph, getPixelData, yuvImage, blurBoundries=true) {
 	const w = imgWidth*pixelSize;
 	const boundaries = []
 
@@ -93,15 +93,33 @@ function floodfillNormalImage(colorCanvas, splineObjects, imgWidth, imgHeight, d
 			for (const coord of boundaries) { for (const off of pixOff) d32[coord] = d32[coord] || d32[coord+off] } // sometimes boundaries are vertical or horizontal, so we'll just try every neighbor
 
 			// blur boundaries
-			//  const blurred = {}
-			//  for (const coord of boundaries) { 
-			// 	// blur formula from https://stackoverflow.com/a/8440673/9643841
-			// 	const blur0 = ( ((((coord+pixOff[0]) ^ (coord+pixOff[1])) & 0xfefefefe) >> 1) + ((coord+pixOff[0]) & (coord+pixOff[0])) )
-			// 	const blur1 = ( ((((coord+pixOff[2]) ^ (coord+pixOff[3])) & 0xfefefefe) >> 1) + ((coord+pixOff[2]) & (coord+pixOff[3])) )
-			// 	blurred[coord] = ( ((((blur0) ^ (blur1)) & 0xfefefefe) >> 1) + ((blur0) & (blur1)) )
-			//  }
-			//  for (const coord of boundaries) { d32[coord] = blurred[coord] }
-				
+			if (blurBoundries) {
+				const NUM_BLUR_PASSES = 2
+
+				for (var i = 0; i < NUM_BLUR_PASSES; i ++) {
+					const blurred = {}
+					for (const coord of boundaries) { 
+						//     + - +
+						//     | a |
+						// + - + - + - +
+						// | d |   | c |
+						// + - + - + - +
+						//     | b |
+						//     + - +
+						
+						const a = d32[coord+pixOff[0]]
+						const b = d32[coord+pixOff[1]]
+						const c = d32[coord+pixOff[2]]
+						const d = d32[coord+pixOff[3]]
+						
+						// blur formula from https://stackoverflow.com/a/8440673/9643841
+						const blurVert = ( (((a ^ b) & 0xfefefefe) >> 1) + (a & b) )
+						const blurHoriz = ( (((c ^ d) & 0xfefefefe) >> 1) + (c & d) )
+						blurred[coord] = ( (((blurVert ^ blurHoriz) & 0xfefefefe) >> 1) + (blurVert & blurHoriz) )
+					}
+					for (const coord of boundaries) { d32[coord] = blurred[coord] }
+				}
+			}
 		}
 	)
 }
