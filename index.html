@@ -21,11 +21,11 @@
 	<br>
 
 	<br/>
-	<input type="number" id="upscaleFactor" name="upscaleFactor" min="1" max="50" placeholder="10" onchange="upscaleFactorChanged(event)">
+	<input type="number" id="upscaleFactor" name="upscaleFactor" min="1" max="50" value="10" onchange="upscaleFactorChanged(event)">
 	<br/>
 	<br/>
 
-	<input type="radio" id="raw (svg)" name="render type" onchange="renderTypeSelected(event)">
+	<input type="radio" id="raw (svg)" name="render type" onchange="renderTypeSelected(event)" checked>
 	<label for="raw (svg)">raw (svg)</label><br>
 
 	<input type="radio" id="voronoi (svg)" name="render type" onchange="renderTypeSelected(event)">
@@ -56,7 +56,10 @@
 	<br/>
 
 	<input type="checkbox" id="similarityGraph" onchange="renderSimilarityGraphToggled(event)"/>
-	<label for="similarityGraph">Similarity Graph (svg options only)</label>
+	<label for="similarityGraph">Similarity Graph (svg options only)</label><br>
+
+	<input type="checkbox" id="blurBoundries" checked onchange="blurBoundriesToggled(event)"/>
+	<label for="blurBoundries">Blur Boundries (floodfill options only)</label><br>
 
 	
 	<br/>

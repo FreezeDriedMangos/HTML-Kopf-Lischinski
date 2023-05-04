@@ -5,6 +5,7 @@ var hasLoaded = false
 // graphics settings
 var selected = 'raw (svg)'
 var showSimilarityGraph = false
+var blurBoundries = true
 
 // cached graphics data
 var canvases = {}
@@ -150,7 +151,7 @@ function rerender_withoutOverlays(canvas, partial=true) {
 	// https://stackoverflow.com/questions/98359/fastest-gaussian-blur-implementation
 
 	if (selected === 'floodfill (raster)') {
-		floodfillNormalImage(canvas, splineObjects, imgWidth, imgHeight, deltas, similarityGraph, getPixelData, yuvImage)
+		floodfillNormalImage(canvas, splineObjects, imgWidth, imgHeight, deltas, similarityGraph, getPixelData, yuvImage, blurBoundries)
 		if (partial) return
 	}
 	
@@ -188,6 +189,11 @@ function renderTypeSelected(event) {
 function renderSimilarityGraphToggled(event) {
 	showSimilarityGraph = !showSimilarityGraph
 	if (selected.match(/\(.*\)/g)[0] === "(svg)") rerender()
+}
+
+function blurBoundriesToggled(event) {
+	blurBoundries = !blurBoundries
+	if (selected.match(/\(.*\)/g)[0] === "(raster)") rerender()
 }
 
 function upscaleFactorChanged(event) {
