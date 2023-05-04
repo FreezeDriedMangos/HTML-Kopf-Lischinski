@@ -107,15 +107,46 @@ function floodfillNormalImage(colorCanvas, splineObjects, imgWidth, imgHeight, d
 						//     | b |
 						//     + - +
 						
-						const a = d32[coord+pixOff[0]]
-						const b = d32[coord+pixOff[1]]
-						const c = d32[coord+pixOff[2]]
-						const d = d32[coord+pixOff[3]]
+						var a = d32[coord+pixOff[0]]
+						var b = d32[coord+pixOff[1]]
+						var c = d32[coord+pixOff[2]]
+						var d = d32[coord+pixOff[3]]
+
+						// NOTE: pixels are stored as ABGR
+						
+						// convert to premultiplied alpha
+						var aAlpha = Number((a >>> 24) & 0xFF) / 255.0
+						a = (a & 0xFF000000) |
+						    (Math.trunc(((a >>> 16) & 0xFF) * aAlpha) << 16) |
+							(Math.trunc(((a >>>  8) & 0xFF) * aAlpha) <<  8) |
+							(Math.trunc(((a >>>  0) & 0xFF) * aAlpha) <<  0)
+						var bAlpha = Number((b >>> 24) & 0xFF) / 255.0
+						b = (b & 0xFF000000) |
+						    (Math.trunc(((b >>> 16) & 0xFF) * bAlpha) << 16) |
+							(Math.trunc(((b >>>  8) & 0xFF) * bAlpha) <<  8) |
+							(Math.trunc(((b >>>  0) & 0xFF) * bAlpha) <<  0)
+						var cAlpha = Number((c >>> 24) & 0xFF) / 255.0
+						c = (c & 0xFF000000) |
+						    (Math.trunc(((c >>> 16) & 0xFF) * cAlpha) << 16) |
+							(Math.trunc(((c >>>  8) & 0xFF) * cAlpha) <<  8) |
+							(Math.trunc(((c >>>  0) & 0xFF) * cAlpha) <<  0)
+						var dAlpha = Number((d >>> 24) & 0xFF) / 255.0
+						d = (d & 0xFF000000) |
+						    (Math.trunc(((d >>> 16) & 0xFF) * dAlpha) << 16) |
+							(Math.trunc(((d >>>  8) & 0xFF) * dAlpha) <<  8) |
+							(Math.trunc(((d >>>  0) & 0xFF) * aAlpha) <<  0)
 						
 						// blur formula from https://stackoverflow.com/a/8440673/9643841
-						const blurVert = ( (((a ^ b) & 0xfefefefe) >> 1) + (a & b) )
-						const blurHoriz = ( (((c ^ d) & 0xfefefefe) >> 1) + (c & d) )
-						blurred[coord] = ( (((blurVert ^ blurHoriz) & 0xfefefefe) >> 1) + (blurVert & blurHoriz) )
+						const blurVert = ( (((a ^ b) & 0xfefefefe) >>> 1) + (a & b) )
+						const blurHoriz = ( (((c ^ d) & 0xfefefefe) >>> 1) + (c & d) )
+						const blur = ( (((blurVert ^ blurHoriz) & 0xfefefefe) >>> 1) + (blurVert & blurHoriz) )
+
+						// unconvert from premultiplied alpha
+						var blurredAlpha = (Number((blur >>> 24) & 0xFF) / 255.0) || (1.0/255.0)
+						blurred[coord] = (blur & 0xFF000000) |
+						                 (Math.trunc(((blur >>> 16) & 0xFF) / blurredAlpha) << 16) |
+							             (Math.trunc(((blur >>>  8) & 0xFF) / blurredAlpha) <<  8) |
+							             (Math.trunc(((blur >>>  0) & 0xFF) / blurredAlpha) <<  0)
 					}
 					for (const coord of boundaries) { d32[coord] = blurred[coord] }
 				}
