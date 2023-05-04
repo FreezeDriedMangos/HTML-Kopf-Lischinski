@@ -83,11 +83,14 @@ function veryDissimilarColors(yuv1, yuv2) {
 // Raster functions
 //
 
-function initRaster(width = 300, height = 300) {
+function initRaster(width = 300, height = 300, parentElementId=undefined) {
 	var rasterCanvas = document.createElement('canvas');
 	rasterCanvas.width = width;
 	rasterCanvas.height = height;
-	document.body.appendChild(rasterCanvas);
+
+	if (parentElementId) document.getElementById(parentElementId).appendChild(rasterCanvas)
+	else document.body.appendChild(rasterCanvas);
+
 	return rasterCanvas
 }
 
@@ -96,11 +99,14 @@ function initRaster(width = 300, height = 300) {
 //
 
 // https://stackoverflow.com/a/8215105/9643841
-function initSVG(width = 300, height = 300) {
+function initSVG(width = 300, height = 300, parentElementId=undefined) {
 	var svg = document.createElementNS(svgns, "svg");
 	svg.setAttribute('width', width);
 	svg.setAttribute('height', height);
-	document.body.appendChild(svg);
+	
+	if (parentElementId) document.getElementById(parentElementId).appendChild(svg)
+	else document.body.appendChild(svg);
+
 	return svg
 }
 
@@ -312,7 +318,22 @@ function drawSplinesToRasterCanvas(rasterCanvas, { splines, pointsThatArePartOfC
 }
 
 function drawSplineObjectsToRasterCanvas(rasterCanvas, {splineObjects}) {
+	var context = rasterCanvas.getContext('2d')
+
 	splineObjects.forEach(splineObject => {
 		splineObject.drawToCanvas(rasterCanvas.getContext('2d'), false, [0,0,0,255], pixelSize)
+
+		// draw start and end points for debugging
+
+		context.beginPath();
+		context.arc(splineObject.points[0][0]*pixelSize, splineObject.points[0][1]*pixelSize, 3, 0, 2 * Math.PI, false);
+		context.fillStyle = 'green';
+		context.fill();
+
+		
+		context.beginPath();
+		context.arc(splineObject.points[splineObject.points.length-1][0]*pixelSize, splineObject.points[splineObject.points.length-1][1]*pixelSize, 3, 0, 2 * Math.PI, false);
+		context.fillStyle = 'blue';
+		context.fill();
 	})
 }

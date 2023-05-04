@@ -19,9 +19,9 @@ function floodfillNormalImage(colorCanvas, splineObjects, imgWidth, imgHeight, d
 				// canvas.lineTo doesn't support full alpha, so I made my own drawing code
 				var path = splineObject.toPath(pixelSize)
 				for (var i = 0; i < path.length-1; i++) {
-					var vector = [path[i+1][0]-path[i][0], path[i+1][1]-path[i][1]]
-					var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1])
-					var dirNormalized = [vector[0]/mag, vector[1]/mag]
+					var vector = [path[i+1][0]-path[i][0], path[i+1][1]-path[i][1]] // vector from this point to the next point
+					var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1]) // distance between this point and next point
+					var dirNormalized = [vector[0]/mag, vector[1]/mag]             // direction to next point
 					var magCiel = Math.ceil(mag)
 
 					var loc = [path[i][0], path[i][1]]

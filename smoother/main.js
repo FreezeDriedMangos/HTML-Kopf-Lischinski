@@ -27,8 +27,8 @@ function rerender(partial=true) {
 	if (!canvases[selected]) {
 		canvases[selected] = 
 			selected.match(/\(.*\)/g)[0] === "(svg)" 
-			? initSVG(pixelSize*imgWidth, pixelSize*imgHeight) 
-			: initRaster(imgWidth*pixelSize, imgHeight*pixelSize)
+			? initSVG(pixelSize*imgWidth, pixelSize*imgHeight, 'canvasRoot') 
+			: initRaster(imgWidth*pixelSize, imgHeight*pixelSize, 'canvasRoot')
 
 		canvases[selected].id = selected + " canvas"
 	}
@@ -208,6 +208,9 @@ function upscaleFactorChanged(event) {
 }
 
 function main() {
+	selected = 'raw (svg)'
+	document.getElementById('raw (svg)').checked = true
+
 	compute()
     rerender()
 
