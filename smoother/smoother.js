@@ -31,6 +31,10 @@ const deltaUpRight_index = 2
 // Color Utility
 //
 
+function lerp(a, b, t) {
+	return (1-t)*a + t*b
+}
+
 // https://stackoverflow.com/a/5624139/9643841
 function componentToHex(c) {
 	var hex = c.toString(16);
@@ -52,6 +56,17 @@ function RGBtoYUV(r, g, b, a=255) {
 	return [y, u, v, a]
 }
 
+// https://stackoverflow.com/a/54070620
+function rgb2hsv(r,g,b) {
+	r /= 255
+	g /= 255
+	b /= 255
+
+	let v=Math.max(r,g,b), c=v-Math.min(r,g,b);
+	let h= c && ((v==r) ? (g-b)/c : ((v==g) ? 2+(b-r)/c : 4+(r-g)/c)); 
+	return [60*(h<0?h+6:h), v&&c/v, v];
+}
+
 
 function differentColors(yuv1, yuv2) {
 	if (yuv1[3] !== undefined || yuv2[3] !== undefined) // if they have alpha components
@@ -70,6 +85,7 @@ function dissimilarColors(yuv1, yuv2) {
 	var dy = Math.abs(yuv1[0]-yuv2[0]) > 48;
 	var du = Math.abs(yuv1[1]-yuv2[1]) > 7 ;
 	var dv = Math.abs(yuv1[2]-yuv2[2]) > 6 ;
+
 	return dy || du || dv;	
 }
 
@@ -250,6 +266,96 @@ function init() {
 
 //window.onload = preinit;
 
+function getPallette() {
+	const pallette = {}
+	for (var x = 0; x < imgWidth; x++) {
+		for (var y = 0; y < imgHeight; y++) {
+			const rgba = getPixelData(x, y)
+			pallette[rgbToHex(...rgba)] = rgba
+		}
+	}
+
+	const retval = Object.values(pallette)
+	retval.sort((c1, c2) => rgb2hsv(...c1)[0] - rgb2hsv(...c2)[0]) // sort by hue
+	return retval
+}
+
+//
+//
+// More complex draw functions
+//
+//
+
+function drawPallette(pallette, parentElementId = undefined, palletteSwatchSize = 10) {
+	const palletteParent = parentElementId ? document.getElementById(parentElementId) : document.createElement('div')
+	if (!parentElementId) document.body.appendChild(palletteParent)
+
+	pallette.forEach(color => {
+		const swatch = document.createElement('div');
+
+		swatch.style.minWidth = swatch.style.maxWidth = palletteSwatchSize
+		swatch.style.minHeight = swatch.style.maxHeight = palletteSwatchSize
+		swatch.style.margin = '5px'
+		swatch.style.border = 'black solid 1px'
+		swatch.style.backgroundColor = rgbToHex(...color)
+
+		palletteParent.appendChild(swatch)
+	})
+}
+
+function drawSimilarityGrid(pallette, parentElementId = undefined, palletteSwatchSize = 10) {
+	const palletteParent = parentElementId ? document.getElementById(parentElementId) : document.createElement('div')
+	if (!parentElementId) document.body.appendChild(palletteParent)
+
+	// set up the grid
+	palletteParent.style.display = 'grid',
+	palletteParent.style.gridTemplateColumns = pallette.reduce((snowball, snow) => snowball + palletteSwatchSize + " ", ""),
+	palletteParent.style.gap = '2px'
+	palletteParent.style.columnCount = pallette.length+1
+	palletteParent.style.width = 'fit-content'
+
+	// utility function
+	const createSwatch = (color, r, c) => {
+		const swatch = document.createElement('div')
+		swatch.style.minWidth = swatch.style.maxWidth = palletteSwatchSize
+		swatch.style.minHeight = swatch.style.maxHeight = palletteSwatchSize
+		swatch.style.border = (color.length >= 9 && color.substring(7, 9) === '00') ? 'lightgrey solid 1px' : 'black solid 1px'
+		swatch.style.backgroundColor = color
+		swatch.style.aspectRatio = 1
+		swatch.style.gridRow = r
+		swatch.style.gridColumn = c
+
+		return swatch
+	}
+
+	// fill the empty corner of the comparison grid
+	const emptyCorner = createSwatch('#00000000', 1, 1)
+	emptyCorner.style.border = '1px solid white'
+	palletteParent.appendChild(emptyCorner)
+
+	// top row
+	pallette.forEach((color, c) => palletteParent.appendChild(createSwatch(rgbToHex(...color), 1, c+2)) )
+
+	// each subsequent row
+	pallette.forEach((color, r) => {
+		palletteParent.appendChild(createSwatch(rgbToHex(...color), r+2, 1))
+		const yuvColor = RGBtoYUV(...color)
+
+		// similarity chart
+		pallette.forEach((otherColor, c) => {
+			const yuvOtherColor = RGBtoYUV(...otherColor)
+
+			var similarity = '#ffff00' // similar, but not same
+			if (!differentColors(yuvColor, yuvOtherColor)) similarity = '#ffffff' // are the same color
+			if (dissimilarColors(yuvColor, yuvOtherColor)) similarity = '#ffaa00'
+			if (veryDissimilarColors(yuvColor, yuvOtherColor)) similarity = '#ff0000'
+
+			const similaritySwatch = createSwatch(similarity, r+2, c+2)
+			similaritySwatch.style.border = '1px solid white'
+			palletteParent.appendChild(similaritySwatch)
+		})
+	})
+}
 
 function drawInputToSVGCanvas(svgCanvas, imgWidth, imgHeight, yuvImage=undefined) {
 	for (var x = 0; x < imgWidth; x++) {

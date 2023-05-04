@@ -11,6 +11,7 @@ var blurBoundries = true
 var canvases = {}
 
 // computation results
+var pallette = undefined
 var computation_similarityGraph = {}
 var computation_voronoi = {}
 var computation_splines = {}
@@ -216,6 +217,9 @@ function main() {
 	compute()
     rerender()
 
+	pallette = getPallette() // not needed for the algortihm, so this is handled outside of compute() and rerender()
+	drawSimilarityGrid(pallette, 'pallette')
+	
 	hasLoaded = true
 }
 
