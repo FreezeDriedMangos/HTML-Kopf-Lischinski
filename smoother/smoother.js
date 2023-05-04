@@ -40,6 +40,10 @@ function rgbToHex(r, g, b, a) {
 	return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b) + componentToHex(a);
 }
 
+function invertRGB(r, g, b, a) {
+	return [255-r, 255-g, 255-b, a]
+}
+
 // https://stackoverflow.com/a/17934865
 function RGBtoYUV(r, g, b, a=255) {
 	const y = Math.floor( 0.257 * r + 0.504 * g + 0.098 * b +  16);
@@ -220,11 +224,13 @@ function init() {
 	function loadImage() {
 		var img = document.getElementById(inputImageElementID);
 		
+		// draw the input image to a canvas so the pixel data can be read, 
+		// and also add a ring of alpha pixels around the edge to prevent edge cases later down the road
 		canvas = document.createElement('canvas');
-		imgWidth = canvas.width = img.width;
-		imgHeight = canvas.height = img.height;
+		imgWidth = canvas.width = img.width+2;
+		imgHeight = canvas.height = img.height+2;
 		canvas.getContext('2d').imageSmoothingEnabled = false
-		canvas.getContext('2d').drawImage(img, 0, 0, img.width, img.height);
+		canvas.getContext('2d').drawImage(img, 1, 1, img.width, img.height);
 		console.log({imgWidth, imgHeight})
 
 		// TODO: make an imageWidth+2 by imageHeight+2 array and fill it with the colors of the image, the 1 pixel wide ring on the edges should be filled with [0,0,0,0]
@@ -261,13 +267,21 @@ function drawSimilarityGraphToSVGCanvas(svgCanvas, imgWidth, imgHeight, similari
 	for (var x = 0; x < imgWidth; x++) {
 		for (var y = 0; y < imgHeight; y++) {
 			for (var i = 0; i < deltas.length; i++) {
+				if (similarityGraph[x][y][i] == false) continue;
+
 				var delta = deltas[i]
 
 				var newX = x + delta[0]
 				var newY = y + delta[1]
-				// if (newX < 0 || newX >= imgWidth || newY < 0 || newY >= imgHeight) continue
-				if (similarityGraph[x][y][i] == false) continue;
-				makeLine(svgCanvas, x*pixelSize+pixelSize/2, y*pixelSize+pixelSize/2, newX*pixelSize+pixelSize/2, newY*pixelSize+pixelSize/2)
+
+				makeLine(
+					svgCanvas, 
+					x*pixelSize+pixelSize/2, 
+					y*pixelSize+pixelSize/2, 
+					newX*pixelSize+pixelSize/2, 
+					newY*pixelSize+pixelSize/2, 
+					invertRGB(...getPixelData(x, y))
+				)
 			}
 		}
 	}
