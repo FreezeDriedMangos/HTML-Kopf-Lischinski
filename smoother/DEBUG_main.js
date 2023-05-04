@@ -119,7 +119,7 @@ function main() {
 	// TODO: gaussian blur
     var blurCanvas = initRaster(imgWidth*pixelSize, imgHeight*pixelSize)
 	floodfillNormalImage(blurCanvas, splineObjects, imgWidth, imgHeight, deltas, similarityGraph, getPixelData, yuvImage)
-    gauss(blurCanvas, 2)
+    gauss(blurCanvas, 1)
 	
 	//const splinePaths = splineObjects.map(splineObject => splineObject.toPath())
 	

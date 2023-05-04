@@ -1,8 +1,4 @@
 <header>
-	<!-- <script type="text/javascript">
-	</script> -->
-	<!-- <script type="text/javascript" src="lib/BSpline/BSpline.js"></script> -->
-
 	<script type="text/javascript" src="lib/thibauts_bspline.js"></script>
 	<script type="text/javascript" src="BSpline.js"></script>
 	<script type="text/javascript" src="lib/line_of_best_fit.js"></script>
@@ -16,14 +12,54 @@
 	<script type="text/javascript" src="smoother/splineSmoothening.js"></script>
 	<script type="text/javascript" src="smoother/floodfill.js"></script>
 
-	<script type="text/javascript" src="smoother/DEBUG_main.js"></script>
+	<script type="text/javascript" src="smoother/main.js"></script>
 </header>
 <body>
 	<div id="warning"></div>
-	<!-- <img id="my-image" crossorigin="anonymous" src="input.png" alt="input image" width="47" height="44">  -->
-	<input type='file' accept='image/*' onchange='openFile(event)'><br>
-	<!-- <img id='output' style="height:100px; width:100px;"> -->
+	<input type='file' accept='image/*' onchange='openFile(event)'>
 	<img id='my-image'>
 	<br>
+	
+
+	<input type="radio" id="raw (svg)" name="render type" onchange="renderTypeSelected(event)">
+	<label for="raw (svg)">raw (svg)</label><br>
+
+	<input type="radio" id="voronoi (svg)" name="render type" onchange="renderTypeSelected(event)">
+	<label for="voronoi (svg)">voronoi (svg)</label><br>
+
+	<input type="radio" id="splines (svg)" name="render type" onchange="renderTypeSelected(event)">
+	<label for="splines (svg)">splines (svg)</label><br>
+
+	<input type="radio" id="splines (raster)" name="render type" onchange="renderTypeSelected(event)">
+	<label for="splines (raster)">splines (raster)</label><br>
+
+	<input type="radio" id="smooth splines (raster)" name="render type" onchange="renderTypeSelected(event)">
+	<label for="smooth splines (raster)">smooth splines (raster)</label><br>
+
+	<input type="radio" id="floodfill (raster)" name="render type" onchange="renderTypeSelected(event)">
+	<label for="floodfill (raster)">floodfill (raster)</label><br>
+
+	<input type="radio" id="direction (raster)" name="render type" onchange="renderTypeSelected(event)">
+	<label for="direction (raster)">direction (raster)</label><br>
+
+	<input type="radio" id="distance field (raster)" name="render type" onchange="renderTypeSelected(event)">
+	<label for="distance field (raster)">distance field (raster)</label><br>
+
+	<input type="radio" id="floodfill blurred (raster)" name="render type" onchange="renderTypeSelected(event)">
+	<label for="floodfill blurred (raster)">floodfill blurred (raster)</label><br>
+
+	<br/>
+	<br/>
+
+	<input type="checkbox" id="similarityGraph" onchange="renderSimilarityGraphToggled(event)"/>
+	<label for="similarityGraph">Similarity Graph</label>
+
+	
+	<br/>
+	<br/>
+
+	<button onclick="rerender()">
+		Rerender
+	</button>
 
 </body>
