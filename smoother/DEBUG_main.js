@@ -115,92 +115,12 @@ function main() {
 	floodfillEdgeDistanceFieldImage(dfCanvas, splineObjects, imgWidth)
 
 
-	// // input is of form [[weight, color], ...]
-	// function weightedAverage(colorWeights) {
-	// 	var sum = colorWeights.reduce((s, colorWeight) => s+colorWeight[0], 0)
-	// 	return colorWeights.reduce((output, colorWeight) => {
-	// 		const scale = colorWeight[0]/sum
-	// 		return colorWeight[1].map(channel => channel*scale)
-	// 	}, [0,0,0,0])
-	// }
 
-	// const PIXEL_SHADING_RADIUS = 1
-	// const ONE_OVER_SQRT_2PI = 1 / Math.sqrt(2*Math.PI)
-	// const SIGMA = 1
-	// const SIGMA_SQUARED = SIGMA*SIGMA
-	// const UPSCALE = 5
-
-	// function gaussian(distanceSquared) {
-	// 	return (1/SIGMA)*ONE_OVER_SQRT_2PI*Math.exp(-0.5*distanceSquared/SIGMA_SQUARED)
-	// }
-
-	// var finalColorCanvas = document.createElement('canvas');
-	// finalColorCanvas.width = imgWidth*UPSCALE;
-	// finalColorCanvas.height = imgHeight*UPSCALE;
-	// document.body.appendChild(finalColorCanvas);
-
-	// const ctx = finalColorCanvas.getContext('2d')
-	// // var imagedata = finalColorCanvas.getContext('2d').createImageData(imgWidth*UPSCALE, imgHeight*UPSCALE);
-	// var buffer = new Uint8ClampedArray(imgWidth*UPSCALE * imgHeight*UPSCALE * 4);
-
-	// for (var y = 0; y < imgHeight*UPSCALE; y++) {
-	// 	console.log('starting row')
-	// 	for (var x = 0; x < imgWidth*UPSCALE; x++) {
-	// 		var outputIndex = (y * imgWidth*UPSCALE + x) * 4;
-
-	// 		var px = Math.floor(x/UPSCALE)
-	// 		var py = Math.floor(y/UPSCALE)
-
-	// 		const colorWeights = []
-	// 		for (var dx = -PIXEL_SHADING_RADIUS; dx <= PIXEL_SHADING_RADIUS; dx++) {
-	// 			for (var dy = -PIXEL_SHADING_RADIUS; dy <= PIXEL_SHADING_RADIUS; dy++) { 
-	// 				var originalImagePixelScaledX = (px+dx)*UPSCALE
-	// 				var originalImagePixelScaledY = (py+dy)*UPSCALE
-
-	// 				var distToOriginalImagePixelSquared = (originalImagePixelScaledX-x)+(originalImagePixelScaledX-x) * (originalImagePixelScaledY-y)+(originalImagePixelScaledY-y)
-	// 				colorWeights.push([gaussian(distToOriginalImagePixelSquared), getPixelData(px+dx, py+dy)])
-	// 			}
-	// 		}
-
-	// 		const thisPixelColor = weightedAverage(colorWeights)
-	// 		buffer[outputIndex+0] = thisPixelColor[0]
-	// 		buffer[outputIndex+1] = thisPixelColor[1]
-	// 		buffer[outputIndex+2] = thisPixelColor[2]
-	// 		buffer[outputIndex+3] = thisPixelColor[3]
-	// 	}
-
-	// }
-
-	// console.log("dome buildngin imaged ata");
-	// var imagedata = ctx.createImageData(imgWidth*UPSCALE, imgHeight*UPSCALE);
-	// imagedata.data.set(buffer);
-	// //ctx.putImageData(imagedata, 0, 0);
-	// // finalColorCanvas.getContext('2d').putImageData(imagedata, 0, 0);
-
+	// TODO: gaussian blur
+    var blurCanvas = initRaster(imgWidth*pixelSize, imgHeight*pixelSize)
+	floodfillNormalImage(blurCanvas, splineObjects, imgWidth, imgHeight, deltas, similarityGraph, getPixelData, yuvImage)
+    gauss(blurCanvas, 2)
 	
-	// // const BLENDING_RADIUS = 2;
-	// // const ONE_OVER_BLENDING_RADIUS = 1/BLENDING_RADIUS;
-
-	// // var colorsSVG = initSVG(pixelSize*imgWidth, pixelSize*imgHeight);
-
-	// // var gradientsMade = {}
-	// // for (var x = 0; x < imgWidth; x++) {
-	// // 	for (var y = 0; y < imgHeight; y++) {
-	// // 		var gradientName = 'g'+getPixelData(x, y).join('g')
-	// // 		if (!gradientsMade[gradientName]) {
-	// // 			gradientsMade[gradientName] = true
-	// // 			var color = rgbToHex(...getPixelData(x, y))
-	// // 			makeGradient(colorsSVG, gradientName, [
-	// // 				[(ONE_OVER_BLENDING_RADIUS*100)+'%', color], 
-	// // 				['100%', color.slice(0, 7)+'00']
-	// // 			])
-	// // 		}
-
-	// // 		makeCircle(colorsSVG, x*pixelSize*2, y*pixelSize*2, BLENDING_RADIUS*pixelSize, `url('#${gradientName}')`)
-	// // 		// makeCircle(colorsSVG, x*pixelSize, y*pixelSize, BLENDING_RADIUS*pixelSize)
-	// // 	}
-	// // }
-
 	//const splinePaths = splineObjects.map(splineObject => splineObject.toPath())
 	
 	// for each edge in each spline path, round the endpoints down to the nearest integer x,y muliple of pixelSize, to find which pixel each endpoint lives in
