@@ -185,7 +185,7 @@ class ClampedClosedBSpline {
 	}
 
 	// function from https://github.com/Tagussan/BSpline/blob/master/main.js
-	drawToCanvas(ctx, drawPoints = false, color=[0,0,0,255]){
+	drawToCanvas(ctx, drawPoints = false, color=[0,0,0,255], scale=1){
 
 		//ctx.clearRect(0,0,canv.width,canv.height);
 		const pts = this.points
@@ -197,7 +197,7 @@ class ClampedClosedBSpline {
 			for(var i = 0;i<pts.length;i++){
 				ctx.fillStyle = "rgba(0,255,0,10)";
 				ctx.beginPath();
-				ctx.arc(pts[i][0],pts[i][1],3,0,Math.PI*2,false);
+				ctx.arc(pts[i][0]*scale,pts[i][1]*scale,3,0,Math.PI*2,false);
 				ctx.fill();
 				ctx.closePath();   
 			}
@@ -209,11 +209,11 @@ class ClampedClosedBSpline {
 		oldy = this.evaluate(0)[1];
 		ctx.strokeStyle = `rgba(${color.join(',')})`
 		for(var t = 0;t <= 1;t+=0.001){
-			ctx.moveTo(oldx,oldy);
+			ctx.moveTo(oldx*scale,oldy*scale);
 			var interpol = this.evaluate(t);
 			x = interpol[0];
 			y = interpol[1];
-			ctx.lineTo(x,y);
+			ctx.lineTo(x*scale,y*scale);
 			oldx = x;
 			oldy = y;
 		}

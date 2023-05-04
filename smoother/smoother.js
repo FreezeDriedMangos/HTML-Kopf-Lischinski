@@ -313,6 +313,6 @@ function drawSplinesToRasterCanvas(rasterCanvas, { splines, pointsThatArePartOfC
 
 function drawSplineObjectsToRasterCanvas(rasterCanvas, {splineObjects}) {
 	splineObjects.forEach(splineObject => {
-		splineObject.drawToCanvas(rasterCanvas.getContext('2d'), false)
+		splineObject.drawToCanvas(rasterCanvas.getContext('2d'), false, [0,0,0,255], pixelSize)
 	})
 }

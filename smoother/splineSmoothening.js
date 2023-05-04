@@ -12,14 +12,14 @@ function smoothenByRandomDeletionAndHighDegree(splines) {
 		}
 		
 		var absolutePoints = newIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i))
-		var absolutePoints_scaled = absolutePoints.map(point => [pixelSize*point[0], pixelSize*point[1]])
+		var absolutePoints_scaled = absolutePoints.map(point => [point[0], point[1]])
 		
 		if (newIndexes.length <= 5 && newIndexes[0] === newIndexes[newIndexes.length-1]) {
 			// this is a tiny closed loop and so we want to expand it 
 			const center = absolutePoints_scaled.reduce(([avgX, avgY], [x, y]) => [avgX + x/newIndexes.length, avgY + y/newIndexes.length], [0,0])
 			absolutePoints_scaled.forEach(point => {
-				point[0] += 0.2*pixelSize*(point[0]-center[0])
-				point[1] += 0.2*pixelSize*(point[1]-center[1])
+				point[0] += 0.2*(point[0]-center[0])
+				point[1] += 0.2*(point[1]-center[1])
 			})
 		}
 
@@ -33,14 +33,14 @@ function smoothenByRandomDeletionAndHighDegree(splines) {
 
 function smoothenByCurvature(splines) {
 	const POSITOINAL_ENERGY_WEIGHT = 0
-	const MAX_RANDOM_OFFSET = 0.5*pixelSize
+	const MAX_RANDOM_OFFSET = 0.5
 	const CURVATURE_INTEGRAL_INTERVALS_PER_SPAN = 20
 	const NUM_OPTOMIZATION_GUESSES_PER_POINT = 20
 	const SPLINE_DEGREE = 3 // must be at least 3
 
 	const splineObjects = splines.map(splinePointIndexes => {
 		var absolutePoints = splinePointIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i))
-		var absolutePoints_scaled = absolutePoints.map(point => [pixelSize*point[0], pixelSize*point[1]])
+		var absolutePoints_scaled = absolutePoints.map(point => [point[0], point[1]])
 		return new ClampedClosedBSpline(SPLINE_DEGREE, absolutePoints_scaled)
 	})
 
@@ -170,7 +170,7 @@ function smoothenByShapesOfBestFit() {
 
 	// const SPLINE_DEGREE = 3 
 	// const splineObjects = absoluteSplines.map(absoluteSpline => {
-	// 	var absolutePoints_scaled = absoluteSpline.map(point => [pixelSize*point[0], pixelSize*point[1]])
+	// 	var absolutePoints_scaled = absoluteSpline.map(point => [point[0], point[1]])
 	// 	return new ClampedClosedBSpline(SPLINE_DEGREE, absolutePoints_scaled)
 	// })
 	
