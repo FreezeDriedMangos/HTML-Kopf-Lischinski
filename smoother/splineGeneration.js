@@ -249,9 +249,12 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 			
 			for (var j = 0; j < spline.length; j++) {
 				const edge = spline[j] + ' - ' + spline[j+1]
-				if (!markedEdges[edge]) continue
+				const inverseEdge = spline[j+1] + ' - ' + spline[j]
+				const edgeMarking = markedEdges[edge] || markedEdges[inverseEdge]
 				
-				if (splineForcedState && markedEdges[edge].toString() !== splineForcedState.toString()) {
+				if (!edgeMarking) continue
+
+				if (splineForcedState && edgeMarking.toString() !== splineForcedState.toString()) {
 					// this spline was forced to be in two different states. To respect this, we must split it
 					splines.push(spline.slice(j)) // I do not like that "slice" and "splice" are so similarly named - the difference between the two is very important
 					spline.splice(j)
@@ -259,7 +262,7 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 					break // don't worry, the code below will still trigger on this edge, it'll just happen when the outer loop reaches the newly added spline
 				}
 				
-				splineForcedState = markedEdges[edge]
+				splineForcedState = edgeMarking
 			}
 
 			if (splineForcedState) {

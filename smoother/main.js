@@ -159,6 +159,23 @@ function rerender_withoutOverlays(canvas, partial=true) {
     // then do a much gentler gaussian blur for anti-aliasing
 	// https://stackoverflow.com/questions/98359/fastest-gaussian-blur-implementation
 
+	if (selected === 'floodfill unsmoothened (raster)') {
+		const objs = computation_splines.packagedSplinePrototypes.map(packagedSplinePrototype => {
+			const splinePointIndexes = packagedSplinePrototype.points
+	
+			var absolutePoints = splinePointIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i))
+			var absolutePoints_scaled = absolutePoints.map(point => [pixelSize*point[0], pixelSize*point[1]])
+			
+			const splineObject = new ClampedClosedBSpline(4, absolutePoints_scaled)
+			splineObject.isContouringSpline = packagedSplinePrototype.isContouringSpline
+			splineObject.isGhostSpline = packagedSplinePrototype.isGhostSpline
+			return splineObject
+		})
+
+		floodfillNormalImage(canvas, objs, imgWidth, imgHeight, deltas, similarityGraph, getPixelData, yuvImage, blurBoundries)
+		if (partial) return
+	}
+
 	if (selected === 'floodfill (raster)') {
 		floodfillNormalImage(canvas, splineObjects, imgWidth, imgHeight, deltas, similarityGraph, getPixelData, yuvImage, blurBoundries)
 		if (partial) return
@@ -287,11 +304,8 @@ function handleClick(x, y) {
 
 	if (selected === 'splines (svg)' || selected === 'splines (raster)') {
 		const edgeClicked = pixelToEdge[x+','+y]
-		console.log('clicked edge  ' + edgeClicked)
 		
 		if (!edgeClicked) return
-		
-		console.log(edgeToState[edgeClicked])
 
 		// update edge state and redraw this edge
 		if (edgeToState[edgeClicked].isContouringSpline) {
@@ -304,6 +318,32 @@ function handleClick(x, y) {
 			edgeToState[edgeClicked] = {isContouringSpline: false, isGhostSpline: true}
 			markedEdges[edgeClicked] = {isContouringSpline: false, isGhostSpline: true}
 		}
+		
+		var splineFound = undefined
+		for (var i = 0; i < computation_splines.packagedSplinePrototypes.length; i++) {
+			var packagedSplinePrototype = computation_splines.packagedSplinePrototypes[i]
+
+			for (var j = 0; j < packagedSplinePrototype.points.length - 1; j++) {
+				const edge = packagedSplinePrototype.points[j] + ' - ' + packagedSplinePrototype.points[j+1]
+				const inverseEdge = packagedSplinePrototype.points[j+1] + ' - ' + packagedSplinePrototype.points[j]
+
+				if (edge === edgeClicked || inverseEdge === edgeClicked) {
+					splineFound = i
+					break
+				}
+			}
+
+			if (splineFound != undefined) break
+		}
+		
+		if (splineFound == undefined) return
+
+		for (var j = 0; j < packagedSplinePrototype.points.length - 1; j++) {
+			const edge = packagedSplinePrototype.points[i] + ' - ' + packagedSplinePrototype.points[i+1]
+
+			edgeToState[edge] = edgeToState[edgeClicked]
+			markedEdges[edge] = edgeToState[edgeClicked]
+		}
 
 		// redraw this edge
 		const color = edgeToState[edgeClicked].isContouringSpline
@@ -312,27 +352,34 @@ function handleClick(x, y) {
 				? [220,220,220]
 				: [130,130,220]
 
-		const edgePointIndexes = edgeClicked.split(' - ')
-		const points = edgePointIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i).map(x_or_y => pixelSize*x_or_y))
-
 		if (selected === "splines (raster)") {
 			const ctx = canvases[selected].getContext('2d')
 
-			var vector = [points[1][0]-points[0][0], points[1][1]-points[0][1]] // vector from this point to the next point
-			var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1]) // distance between this point and next point
-			var dirNormalized = [vector[0]/mag, vector[1]/mag]             // direction to next point
-			var magCiel = Math.ceil(mag)
+			const splinePointIndexes = computation_splines.packagedSplinePrototypes[splineFound].points
+			var pts = splinePointIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i).map(x_or_y => pixelSize*x_or_y))
+			for(var i = 0; i < pts.length-1; i++) {
+				var vector = [pts[i+1][0]-pts[i][0], pts[i+1][1]-pts[i][1]] // vector from this point to the next point
+				var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1]) // distance between this point and next point
+				var dirNormalized = [vector[0]/mag, vector[1]/mag]             // direction to next point
+				var magCiel = Math.ceil(mag)
 
-			var loc = [points[0][0], points[0][1]]
-			for (var j = 0; j <= magCiel+1; j++) {
-				ctx.fillStyle = "rgba("+color.map(c => c/255).toString()+","+(255/255)+")";
-				ctx.fillRect(loc[0], loc[1], 1, 1)
+				var loc = [pts[i][0], pts[i][1]]
+				for (var j = 0; j <= magCiel+1; j++) {
+					ctx.fillStyle = "rgba("+color.toString()+","+255+")";
+					ctx.fillRect(loc[0], loc[1], 1, 1)
 
-				loc[0] += dirNormalized[0]
-				loc[1] += dirNormalized[1]
+					loc[0] += dirNormalized[0]
+					loc[1] += dirNormalized[1]
+				}
 			}
 		} else if (selected === "splines (svg)") {
 			makeLine(canvases[selected], ...points[0], ...points[1], color)
+			const splinePointIndexes = computation_splines.packagedSplinePrototypes[splineFound].points
+		
+			var pts = splinePointIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i).map(x_or_y => pixelSize*x_or_y))
+			for(var i = 0; i < pts.length-1; i++) {
+				makeLine(canvases[selected], ...pts[i], ...pts[i+1], color)
+			}
 		}
 	}
 

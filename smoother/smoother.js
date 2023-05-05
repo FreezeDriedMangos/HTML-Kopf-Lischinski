@@ -436,7 +436,7 @@ function drawVoronoiToSVGCanvas(svgCanvas, imgWidth, imgHeight, voronoiVerts, vo
 	}
 }
 
-function drawSplinesToSVGCanvas(svgCanvas, { packagedSplinePrototypes, splines, adjacencyList, pointsThatArePartOfContouringSplines, pointsThatArePartOfGhostSplines } ) {
+function drawSplinesToSVGCanvas(svgCanvas, { packagedSplinePrototypes, adjacencyList } ) {
 	// draw all adjacencies (this highlights edges that were missed when building splines)
 	Object.keys(adjacencyList).forEach(globalPointIndex => {
 		var point = globallyUniqueIndex_to_absoluteXY(globalPointIndex).map(x_or_y => pixelSize*x_or_y)
