@@ -205,6 +205,51 @@ function rerender_withoutOverlays(canvas, partial=true) {
 	}
 }
 
+// I've got it!! When the user clicks a spline to override its status, mark the EDGE they clicked! that edge will be marked as "forced to be a ghost/contouring/normal spline" and then during generation, any spline containing a forced edge will take on the state of that edge. if it contains two forced edges of a different type, the spline will be split into two separate splines as a final step in splineGeneration.js (after all the existing steps)
+// note: not available for smoothened splines, since they delete points
+
+var markedEdges = {}
+
+var pixelToEdge = {}
+var edgeToState = {}
+
+function compileSplineObjectPixels() {
+	computation_splines.packagedSplinePrototypes.forEach(packagedSplinePrototype => {
+		const splinePointIndexes = packagedSplinePrototype.points
+		var color = packagedSplinePrototype.isContouringSpline
+			? [0,0,0] 
+			: packagedSplinePrototype.isGhostSpline
+				? [220,220,220]
+				: [70,70,180]
+		
+		var points = splinePointIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i).map(x_or_y => pixelSize*x_or_y))
+		for(var i = 0; i < points.length-1; i++) {
+			const edge = splinePointIndexes[i] + ' - ' + splinePointIndexes[i+1]
+			edgeToState[edge] = {isGhostSpline: packagedSplinePrototype.isGhostSpline, isContouringSpline: packagedSplinePrototype.isContouringSpline}
+
+			var vector = [points[i+1][0]-points[i][0], points[i+1][1]-points[i][1]] // vector from this point to the next point
+			var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1]) // distance between this point and next point
+			var dirNormalized = [vector[0]/mag, vector[1]/mag]             // direction to next point
+			var magCiel = Math.ceil(mag)
+
+			var loc = [points[i][0], points[i][1]]
+			for (var j = 0; j <= magCiel+1; j++) {
+				
+
+				// make a 5x5 hitbox around each pixel so it's easier for the user to click on them
+				for(var dx = -2; dx <= 2; dx++)
+					for(var dy = -2; dy <= 2; dy++)	
+						pixelToEdge[Math.floor(loc[0]+dx)+','+Math.floor(loc[1]+dy)] = edge
+
+
+				loc[0] += dirNormalized[0]
+				loc[1] += dirNormalized[1]
+			}
+		}
+	})
+}
+
+
 //
 // Canvas clicked
 //
@@ -235,8 +280,18 @@ function rasterCanvasClicked(e) {
 
 // both types of canvas click handler return the same coordinates when the mouse clicks the same place, so we can have just one click handler :)
 function handleClick(x, y) {
-	// TODO: modify raster spline render functions to return some sort of object telling us which spline is drawn to which pixel
-	// TODO: modify spline constructor file (and everywhere that uses it) to return some sort of object that has a list of points, isGhostSpline, and isContourSpline. That way we don't need to rely on pointsThatArePartOfGhostSplines and pointsThatArePartOfContourSplines anymore
+	x = Math.floor(x)
+	y = Math.floor(y)
+
+	console.log('clicked ('+x+','+y+')')
+
+	const edgeClicked = pixelToEdge[x+','+y]
+	console.log('clicked edge  ' + edgeClicked)
+
+	if (!edgeClicked) return
+
+	console.log(edgeToState[edgeClicked])
+
 }
 
 //
@@ -303,6 +358,7 @@ function similaritySwatchClicked(palletteColor1, palletteColor2, swatchElement) 
 
 function recompute() {
 	compute()
+	compileSplineObjectPixels() // bonus computation used for ui only
 	rerender()
 }
 
@@ -315,6 +371,7 @@ function main() {
 	palletteOverrides = {} // clear overrides, we'll be getting a new pallette anyway
 
 	compute()
+	compileSplineObjectPixels() // bonus computation used for ui only
     rerender()
 
 	pallette = getPallette() // not needed for the algortihm, so this is handled outside of compute() and rerender()
