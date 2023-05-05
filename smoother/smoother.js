@@ -436,7 +436,7 @@ function drawVoronoiToSVGCanvas(svgCanvas, imgWidth, imgHeight, voronoiVerts, vo
 	}
 }
 
-function drawSplinesToSVGCanvas(svgCanvas, { splines, adjacencyList, pointsThatArePartOfContouringSplines, pointsThatArePartOfGhostSplines } ) {
+function drawSplinesToSVGCanvas(svgCanvas, { packagedSplinePrototypes, splines, adjacencyList, pointsThatArePartOfContouringSplines, pointsThatArePartOfGhostSplines } ) {
 	// draw all adjacencies (this highlights edges that were missed when building splines)
 	Object.keys(adjacencyList).forEach(globalPointIndex => {
 		var point = globallyUniqueIndex_to_absoluteXY(globalPointIndex).map(x_or_y => pixelSize*x_or_y)
@@ -448,10 +448,11 @@ function drawSplinesToSVGCanvas(svgCanvas, { splines, adjacencyList, pointsThatA
 	})
 	
 	// draw splines approximation
-	splines.forEach(splinePointIndexes => {
-		var color = pointsThatArePartOfContouringSplines[splinePointIndexes[0]]
+	packagedSplinePrototypes.forEach(packagedSplinePrototype => {
+		const splinePointIndexes = packagedSplinePrototype.points
+		var color = packagedSplinePrototype.isContouringSpline
 			? [0,0,0] 
-			: pointsThatArePartOfGhostSplines[splinePointIndexes[0]]
+			: packagedSplinePrototype.isGhostSpline
 				? [220,220,220]
 				: [70,70,180]
 		
@@ -462,14 +463,16 @@ function drawSplinesToSVGCanvas(svgCanvas, { splines, adjacencyList, pointsThatA
 	})
 }
 
-function drawSplinesToRasterCanvas(rasterCanvas, { splines, pointsThatArePartOfContouringSplines, pointsThatArePartOfGhostSplines }) {
-	splines.forEach(splinePointIndexes => {
+function drawSplinesToRasterCanvas(rasterCanvas, { packagedSplinePrototypes, splines, pointsThatArePartOfContouringSplines, pointsThatArePartOfGhostSplines }) {
+	packagedSplinePrototypes.forEach(packagedSplinePrototype => {
+		const splinePointIndexes = packagedSplinePrototype.points
+
 		var absolutePoints = splinePointIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i))
 		var absolutePoints_scaled = absolutePoints.map(point => [pixelSize*point[0], pixelSize*point[1]])
 		
-		var color = pointsThatArePartOfContouringSplines[splinePointIndexes[0]]
+		var color = packagedSplinePrototype.isContouringSpline
 			? [0,0,0] 
-			: pointsThatArePartOfGhostSplines[splinePointIndexes[0]]
+			: packagedSplinePrototype.isGhostSpline
 				? [220,220,220]
 				: [70,70,180]
 		
