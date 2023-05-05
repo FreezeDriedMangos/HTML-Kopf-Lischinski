@@ -363,6 +363,9 @@ function similaritySwatchClicked(palletteColor1, palletteColor2, swatchElement) 
 //
 
 function recompute() {
+	Object.values(canvases).forEach(canvas => canvas.remove())
+	canvases = {} // canvases need to be rebuilt with the new size
+
 	compute()
 	compileSplineObjectPixels() // bonus computation used for ui only
 	rerender()
