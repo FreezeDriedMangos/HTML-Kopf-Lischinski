@@ -49,11 +49,14 @@ voronoiVertexIndex_to_globallyUniqueIndex[10] = (x,y) => voronoiVertexIndex_to_g
 voronoiVertexIndex_to_globallyUniqueIndex[9] = (x,y) => voronoiVertexIndex_to_globallyUniqueIndex[1](x+1,y+1)
 
 
+var __splinePrototypeCounter = 0
+
 class SplinePrototype {
 	constructor(points, isGhostSpline, isContouringSpline) {
 		this.points = points
 		this.isGhostSpline = isGhostSpline
 		this.isContouringSpline = isContouringSpline
+		this.id = __splinePrototypeCounter++
 	}
 }
 
@@ -267,141 +270,8 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 
 
 	//
-	// TODO: below code is invalid as a result of the "new code:" above
 	// TODO: rewrite the "join splines where they meet at valence 3/4 nodes" code
-	// TODO: I believe this will require recording what EDGES are contour/ghost edges, rather than which points
 	//
-
-
-
-
-	// helper function from https://stackoverflow.com/a/53107778/9643841
-	const pairsOfArray = array => (
-		array.reduce((acc, val, i1) => [
-		  ...acc,
-		  ...new Array(array.length - 1 - i1).fill(0)
-			.map((v, i2) => ([array[i1], array[i1 + 1 + i2]]))
-		], [])
-	  ) 
-
-	// step 3: deal with all the valence3 nodes
-	valence3Nodes.forEach(point => {
-		// this is where 3 spline meetings are resolved
-		var allConnectedSplines = adjacencyList[point].map(neighborPoint => splinesByConstituents[neighborPoint])
-		var joinSpline0 = null //splinesByConstituents[adjacencyList[point][0]]
-		var joinSpline1 = null //splinesByConstituents[adjacencyList[point][1]]
-
-		// var allSplinePairs = pairsOfArray(allConnectedSplines)
-		// try to prioritize connecting splines that separate very dissimilar colors (contouring splines)
-		var countourSplineEndpoints = adjacencyList[point].filter(neighborPoint => pointsThatArePartOfContouringSplines[neighborPoint])
-		var shadingSplineEndpoints  = adjacencyList[point].filter(neighborPoint => !pointsThatArePartOfContouringSplines[neighborPoint])
-		var pairsToConsiderJoining = []
-
-		if (countourSplineEndpoints.length == 2) {
-			pairsToConsiderJoining = [countourSplineEndpoints[0], countourSplineEndpoints[1]]
-		} else if (countourSplineEndpoints.length == 1) {
-			shadingSplineEndpoints.forEach(splinePoint => pairsToConsiderJoining.push([countourSplineEndpoints[0], splinePoint]))
-		} else {
-			if (countourSplineEndpoints.length <= 0) pairsToConsiderJoining = pairsOfArray(shadingSplineEndpoints)
-			if (countourSplineEndpoints.length >= 3) pairsToConsiderJoining = pairsOfArray(countourSplineEndpoints)
-		}
-
-		// out of the pairs we're considering, pick the one forms the smallest angle with `point` as the centerpoint
-		var bestPair = pairsToConsiderJoining[0]
-		var bestAngle = -10
-		pairsToConsiderJoining.forEach(([p0, p1]) => {
-			function cartesianToRelativePolarTheta(x, y) {
-				return Math.atan2(y-point[1] , x-point[0])
-			}
-
-			var theta0 = cartesianToRelativePolarTheta(...p0)
-			var theta1 = cartesianToRelativePolarTheta(...p1)
-			var angle = Math.PI - (Math.abs(theta0-theta1)%(2*Math.PI) - Math.PI)
-
-			if (angle > bestAngle) {
-				bestAngle = angle
-				bestPair = [p0, p1]
-			}
-		})
-
-		// we've got our points! convert them to splines
-		joinSpline0 = splinesByConstituents[bestPair[0]]
-		joinSpline1 = splinesByConstituents[bestPair[1]]
-
-		// add self to all adjacent splines (whether a spline gets joined with another or just terminates, this has to happen anyway)
-		allConnectedSplines.forEach(spline => {
-			if (!spline) { console.error("Found a null spline. The evalutation will likely fail further down the line."); return } // TODO: this should never be null
-			if (adjacencyList[point].includes(spline[0])) spline.unshift(point) // this point is adjacent to the start of the spline
-			else if (adjacencyList[point].includes(spline[spline.length-1])) spline.push(point) // this point is adjacent to the end of the spline
-			else { console.error("attempted to add a point to a non-adjacent spline"); console.log(adjacencyList[point]); console.log(spline) }
-		})
-
-		if (!joinSpline0 || !joinSpline1) return // TODO: these should never be null
-
-		if (joinSpline0 == joinSpline1) {
-			// we made a loop that contained at least 1 valence3orGreater node
-			joinSpline0.unshift(point)
-			joinSpline0.push(point)
-			return
-		}
-
-		// force splines to touch the valence 3 nodes
-		const forceMeet = []
-		for (var i = 0; i < 8; i++)
-			forceMeet.push(point)
-
-		// construct a new spline made by laying the two "to join" splines together end-to-end (and being careful not to introduce any duplicates)
-		var newSpline = []
-		if (joinSpline0[0] == joinSpline1[0]) {
-
-			newSpline = [...joinSpline0, ...forceMeet, ...joinSpline1.slice(1, joinSpline1.length).reverse()]
-
-		} else if (joinSpline0[0] == joinSpline1[joinSpline1.length-1]) {
-			
-			newSpline = [...joinSpline1, ...forceMeet, ...joinSpline0.slice(1, joinSpline0.length)]
-
-		} else if (joinSpline0[joinSpline0.length-1] == joinSpline1[0]) {
-			
-			newSpline = [...joinSpline0, ...forceMeet, ...joinSpline1.slice(1, joinSpline1.length)]
-
-		} else if (joinSpline0[joinSpline0.length-1] == joinSpline1[joinSpline1.length-1]) {
-			
-			newSpline = [...joinSpline0, ...forceMeet, ...joinSpline1.reverse().slice(1, joinSpline1.length)]
-
-		}
-
-		// we dissolved the old splines, so we need to update everywhere it's referenced
-		joinSpline0.forEach(constituent => splinesByConstituents[constituent] = newSpline)
-		splines.splice(splines.indexOf(joinSpline0), 1) // js arrays have no remove function, so I gotta do this
-		joinSpline1.forEach(constituent => splinesByConstituents[constituent] = newSpline)
-		splines.splice(splines.indexOf(joinSpline1), 1) // js arrays have no remove function, so I gotta do this
-
-		splines.push(newSpline)
-	})
-	
-
-	// // remove redundant (colinear) points
-	// splines.forEach(spline => {
-	// 	for(var i = 0; i < spline.length-2; i++) {
-	// 		// if spline[i], spline[i+1], and spline[i+2] are colinear, delete spline[i+1] and do i--
-	// 		// colinearity formula https://math.stackexchange.com/a/405981
-	// 		var [a,b] = spline[i]
-	// 		var [m,n] = spline[i+1]
-	// 		var [x,y] = spline[i+2]
-	// 		if ((n-b)*(x-m)==(y-n)*(m-a)){
-	// 			spline.splice(i+1, 1) // js arrays have no removeAt function, so I gotta do this
-	// 			i--;
-	// 		}
-	// 	}
-	// })
-
-	return {
-		splines,
-		splinesByConstituents,
-		adjacencyList,
-		pointsThatArePartOfContouringSplines,
-		pointsThatArePartOfGhostSplines,
-	}
 }
 
 
