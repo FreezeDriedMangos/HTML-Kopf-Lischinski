@@ -340,9 +340,10 @@ function handleClick(x, y) {
 
 		for (var j = 0; j < packagedSplinePrototype.points.length - 1; j++) {
 			const edge = packagedSplinePrototype.points[i] + ' - ' + packagedSplinePrototype.points[i+1]
+			const inverseEdge = packagedSplinePrototype.points[j+1] + ' - ' + packagedSplinePrototype.points[j]
 
-			edgeToState[edge] = edgeToState[edgeClicked]
-			markedEdges[edge] = edgeToState[edgeClicked]
+			edgeToState[edge] = edgeToState[inverseEdge] = edgeToState[edgeClicked]
+			markedEdges[edge] = markedEdges[inverseEdge] = edgeToState[edgeClicked]
 		}
 
 		// redraw this edge
