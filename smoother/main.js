@@ -90,7 +90,7 @@ function compute(stoppingPoint) {
 	//
 
 	const {pointsThatArePartOfContouringSplines, pointsThatArePartOfGhostSplines} = computation_splines
-	computation_smothenedSplines = smoothenSplines(computation_splines.splines, pointsThatArePartOfContouringSplines, pointsThatArePartOfGhostSplines);
+	computation_smothenedSplines = smoothenSplines(computation_splines.packagedSplinePrototypes)
 
 	// draw smoothened splines
 	if (stoppingPoint === 'smooth splines (raster)') return
@@ -220,7 +220,8 @@ function svgCanvasClicked(evt) {
 
     // The cursor point, translated into svg coordinates
     var cursorpt =  pt.matrixTransform(svg.getScreenCTM().inverse());
-    console.log("(" + cursorpt.x + ", " + cursorpt.y + ")");
+
+	handleClick(cursorpt.x, cursorpt.y)
 }
 
 // function modified from https://stackoverflow.com/a/42111623
@@ -229,7 +230,14 @@ function rasterCanvasClicked(e) {
 	var rect = e.target.getBoundingClientRect();
 	var x = e.clientX - rect.left; //x position within the element.
 	var y = e.clientY - rect.top;  //y position within the element.
-	console.log("Left? : " + x + " ; Top? : " + y + ".");
+	
+	handleClick(x, y)
+}
+
+// both types of canvas click handler return the same coordinates when the mouse clicks the same place, so we can have just one click handler :)
+function handleClick(x, y) {
+	// TODO: modify raster spline render functions to return some sort of object telling us which spline is drawn to which pixel
+	// TODO: modify spline constructor file (and everywhere that uses it) to return some sort of object that has a list of points, isGhostSpline, and isContourSpline. That way we don't need to rely on pointsThatArePartOfGhostSplines and pointsThatArePartOfContourSplines anymore
 }
 
 //

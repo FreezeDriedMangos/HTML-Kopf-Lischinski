@@ -49,6 +49,14 @@ voronoiVertexIndex_to_globallyUniqueIndex[10] = (x,y) => voronoiVertexIndex_to_g
 voronoiVertexIndex_to_globallyUniqueIndex[9] = (x,y) => voronoiVertexIndex_to_globallyUniqueIndex[1](x+1,y+1)
 
 
+class SplinePrototype {
+	constructor(points, isGhostSpline, isContouringSpline) {
+		this.points = points
+		this.isGhostSpline = isGhostSpline
+		this.isContouringSpline = isContouringSpline
+	}
+}
+
 const cachedPoints = {} // we cache points so that later, if one point is moved, all other points with exactly the same [x,y] are also moved the same. in this implementation, that's desireable
 const globallyUniqueIndex_to_absoluteXY = (index) => {
 	// var voronoiVertexIndex = index % 5
@@ -83,6 +91,11 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 
 	var pointsThatArePartOfContouringSplines = {} // secondary output
 	var pointsThatArePartOfGhostSplines = {} // secondary output
+
+	var edgesThatArePartOfGhostSplines = {}
+	var edgesThatArePartOfContourSplines = {}
+
+
 	var adjacencyList = {}
 	for (var x = 0; x < imgWidth; x++) {	
 		for (var y = 0; y < imgHeight; y++) {
@@ -95,7 +108,7 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 				console.log({vert, x, y, thisPixelVoronoiVerts, voronoiVerts})
 				throw e
 			}
-			
+
 			for (var q = 0; q < nextNeighbors.length; q++) { // we'll only consider neighbors 0, 1, 2, and 3 in order to prevent duplicates. the pixels before this one will have 7 covered, and the pixels below will cover 4, 5, and 6
 				var i = nextNeighbors[q]
 				if (similarityGraph[x][y][i] && !(buildGhostSplines && differentColors(yuvImage[x][y], yuvImage[x+deltas[i][0]][y+deltas[i][1]]))) continue; // no splines exist on the boundries of similar pixels, unless we're building ghost splines
@@ -134,9 +147,16 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 					if (veryDissimilarColors(yuvImage[x][y], yuvImage[neighborX][neighborY])) {
 						pointsThatArePartOfContouringSplines[globalIndex0] = true
 						pointsThatArePartOfContouringSplines[globalIndex1] = true
+
+						edgesThatArePartOfContourSplines[globalIndex0 + ' - ' + globalIndex1] = true
+						edgesThatArePartOfContourSplines[globalIndex1 + ' - ' + globalIndex0] = true
+
 					} else if (!dissimilarColors(yuvImage[x][y], yuvImage[neighborX][neighborY])){
 						pointsThatArePartOfGhostSplines[globalIndex0] = true
 						pointsThatArePartOfGhostSplines[globalIndex1] = true
+
+						edgesThatArePartOfGhostSplines[globalIndex0 + ' - ' + globalIndex1] = true
+						edgesThatArePartOfGhostSplines[globalIndex1 + ' - ' + globalIndex0] = true
 					}
 				}
 			}
@@ -212,9 +232,32 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 
 
 
+	const packagedSplinePrototypes = splines.map((splinePoints, splineIndex) => {
+		var isGhostSpline = edgesThatArePartOfGhostSplines[splinePoints[0] + ' - ' + splinePoints[1]]
+		var isContouringSpline = edgesThatArePartOfContourSplines[splinePoints[0] + ' - ' + splinePoints[1]]
+		for(var i = 0; i < splinePoints.length-1; i++) {
+			if (edgesThatArePartOfGhostSplines[splinePoints[i] + ' - ' + splinePoints[i+1]] != isGhostSpline) {
+				console.log({edgesThatArePartOfGhostSplines, splinePoints, splineIndex, i})
+				throw Error("Spline is partly ghost spline, partly not")
+			}
+			if (edgesThatArePartOfContourSplines[splinePoints[i] + ' - ' + splinePoints[i+1]] != isContouringSpline) {
+				console.log({edgesThatArePartOfContourSplines, splinePoints, splineIndex, i})
+				throw Error("Spline is partly contour spline, partly not")
+			}
+
+			if (isGhostSpline && isContouringSpline) {
+				console.log({edgesThatArePartOfContourSplines, edgesThatArePartOfGhostSplines, splinePoints, splineIndex, i})
+				throw Error("Spline is both contour and ghost spline")
+			}
+		}
+		return new SplinePrototype(splinePoints, isGhostSpline, isContouringSpline)
+	})
+
 
 	
 	return {
+		packagedSplinePrototypes,
+
 		splines,
 		splinesByConstituents,
 		adjacencyList,
