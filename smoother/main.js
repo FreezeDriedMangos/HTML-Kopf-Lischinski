@@ -81,7 +81,8 @@ function compute(stoppingPoint) {
 	// smoothen splines
 	//
 
-	computation_smothenedSplines = smoothenSplines(computation_splines.splines);
+	const {pointsThatArePartOfContouringSplines, pointsThatArePartOfGhostSplines} = computation_splines
+	computation_smothenedSplines = smoothenSplines(computation_splines.splines, pointsThatArePartOfContouringSplines, pointsThatArePartOfGhostSplines);
 
 	// draw smoothened splines
 	if (stoppingPoint === 'smooth splines (raster)') return
@@ -169,7 +170,30 @@ function rerender_withoutOverlays(canvas, partial=true) {
 
 	if (selected === 'floodfill blurred (raster)') {
 		floodfillNormalImage(canvas, splineObjects, imgWidth, imgHeight, deltas, similarityGraph, getPixelData, yuvImage)
-		gauss(canvas, 1)
+
+		const boundaries = {}
+		const w = imgWidth*pixelSize;
+		splineObjects.forEach(splineObject => {
+			if (splineObject.isGhostSpline) return // if it's a ghost spline, it's not a boundary
+
+			var path = splineObject.toPath(pixelSize)
+			for (var i = 0; i < path.length-1; i++) {
+				var vector = [path[i+1][0]-path[i][0], path[i+1][1]-path[i][1]] // vector from this point to the next point
+				var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1]) // distance between this point and next point
+				var dirNormalized = [vector[0]/mag, vector[1]/mag]             // direction to next point
+				var magCiel = Math.ceil(mag)
+
+				var loc = [path[i][0], path[i][1]]
+				for (var j = 0; j <= magCiel+1; j++) {
+					const indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
+					boundaries[indx] = true
+					loc[0] += dirNormalized[0]
+					loc[1] += dirNormalized[1]
+				}
+			}
+		})
+
+		for (var i = 0; i < 3; i++) gauss(canvas, 1, boundaries)
 		if (partial) return
 	}
 }
@@ -208,17 +232,43 @@ function upscaleFactorChanged(event) {
 	} catch {}
 }
 
+function similaritySwatchClicked(palletteColor1, palletteColor2, swatchElement) {
+	const similarityScore = dissimilarityScore(palletteColor1, palletteColor2)
+
+	palletteOverrides[palletteColor1.toString()] = palletteOverrides[palletteColor1.toString()] || {}
+	palletteOverrides[palletteColor2.toString()] = palletteOverrides[palletteColor2.toString()] || {}
+
+	palletteOverrides[palletteColor1.toString()][palletteColor2.toString()] = (similarityScore+1)%4 
+	palletteOverrides[palletteColor2.toString()][palletteColor1.toString()] = (similarityScore+1)%4 
+
+	switch ((similarityScore+1)%4) {
+		case 0: swatchElement.style.backgroundColor = '#ffffff'; break
+		case 1: swatchElement.style.backgroundColor = '#ffff00'; break
+		case 2: swatchElement.style.backgroundColor = '#ffaa00'; break
+		case 3: swatchElement.style.backgroundColor = '#ff0000'; break
+	}
+	
+	swatchElement.style.border = '1px solid green'
+}
+
+function recompute() {
+	compute()
+	rerender()
+}
+
 function main() {
 	selected = 'raw (svg)'
 	document.getElementById('raw (svg)').checked = true
 	document.getElementById('drawSimilarityGraph').checked = showSimilarityGraph
 	document.getElementById('blurBoundries').checked = blurBoundries
 
+	palletteOverrides = {} // clear overrides, we'll be getting a new pallette anyway
+
 	compute()
     rerender()
 
 	pallette = getPallette() // not needed for the algortihm, so this is handled outside of compute() and rerender()
-	drawSimilarityGrid(pallette, 'pallette')
+	drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked)
 	
 	hasLoaded = true
 }

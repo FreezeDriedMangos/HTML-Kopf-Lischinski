@@ -1,9 +1,9 @@
 
-function smoothenSplines(splines) {
-	return smoothenByRandomDeletionAndHighDegree(splines)
+function smoothenSplines(splines, pointsThatArePartOfContouringSplines, pointsThatArePartOfGhostSplines) {
+	return smoothenByRandomDeletionAndHighDegree(splines, pointsThatArePartOfContouringSplines, pointsThatArePartOfGhostSplines)
 }
 
-function smoothenByRandomDeletionAndHighDegree(splines) {
+function smoothenByRandomDeletionAndHighDegree(splines, pointsThatArePartOfContouringSplines, pointsThatArePartOfGhostSplines) {
 	const splineObjects = splines.map((splinePointIndexes, splineIndex) => {
 		var newIndexes = [...splinePointIndexes]
 		for (var i = 1; i < newIndexes.length-1; i++) {
@@ -23,8 +23,12 @@ function smoothenByRandomDeletionAndHighDegree(splines) {
 			})
 		}
 
-
 		const splineObject = new ClampedClosedBSpline(8, absolutePoints_scaled);
+
+		// TODO: improve this check - if a spline's second point (splinePointIndexes[1]) is part of a ghost/contour spline, is the whole spline necessarily a ghost/contour spline?
+		splineObject.isGhostSpline = pointsThatArePartOfGhostSplines[splinePointIndexes[1]]
+		splineObject.isContouringSpline = pointsThatArePartOfContouringSplines[splinePointIndexes[1]]
+
 		return splineObject
 	})
 

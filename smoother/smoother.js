@@ -11,6 +11,8 @@ const AREA_SCORE_WEIGHT = 1
 
 var pixelSize = 10 // basically the upscale factor
 
+var palletteOverrides = {}
+
 //
 // non parameter constants (do not touch)
 //
@@ -69,6 +71,9 @@ function rgb2hsv(r,g,b) {
 
 
 function differentColors(yuv1, yuv2) {
+	if (palletteOverrides[yuv1.toString()] && palletteOverrides[yuv1.toString()][yuv2.toString()] != undefined) 
+		return palletteOverrides[yuv1.toString()][yuv2.toString()] >= 1
+
 	if (yuv1[3] !== undefined || yuv2[3] !== undefined) // if they have alpha components
 		if ((yuv1[3] === 0) !== (yuv2[3] === 0)) return true; // if one is completely transparent and the other is not, the pixels are automatically considered dissimilar
 
@@ -79,6 +84,9 @@ function differentColors(yuv1, yuv2) {
 }
 
 function dissimilarColors(yuv1, yuv2) {
+	if (palletteOverrides[yuv1.toString()] && palletteOverrides[yuv1.toString()][yuv2.toString()] != undefined) 
+		return palletteOverrides[yuv1.toString()][yuv2.toString()] >= 2
+
 	if (yuv1[3] !== undefined || yuv2[3] !== undefined) // if they have alpha components
 		if ((yuv1[3] === 0) !== (yuv2[3] === 0)) return true; // if one is completely transparent and the other is not, the pixels are automatically considered dissimilar
 
@@ -90,6 +98,9 @@ function dissimilarColors(yuv1, yuv2) {
 }
 
 function veryDissimilarColors(yuv1, yuv2) {
+	if (palletteOverrides[yuv1.toString()] && palletteOverrides[yuv1.toString()][yuv2.toString()] != undefined) 
+		return palletteOverrides[yuv1.toString()][yuv2.toString()] >= 3
+
 	if (yuv1[3] !== undefined || yuv2[3] !== undefined) // if they have alpha components
 		if ((yuv1[3] === 0) !== (yuv2[3] === 0)) return true; // if one is completely transparent and the other is not, the pixels are automatically considered dissimilar
 
@@ -97,6 +108,14 @@ function veryDissimilarColors(yuv1, yuv2) {
 	var du = Math.abs(yuv1[1]-yuv2[1]) > 100;
 	var dv = Math.abs(yuv1[2]-yuv2[2]) > 100;
 	return dy || du || dv;	
+}
+
+function dissimilarityScore(yuv1, yuv2) {
+	if (!differentColors(yuv1, yuv2)) return 0 // literally the same
+
+	if (veryDissimilarColors(yuv1, yuv2)) return 3 // very dissimilar
+	if (dissimilarColors(yuv1, yuv2)) return 2 // dissimilar
+	return 1 // similar
 }
 
 //
@@ -303,7 +322,7 @@ function drawPallette(pallette, parentElementId = undefined, palletteSwatchSize 
 	})
 }
 
-function drawSimilarityGrid(pallette, parentElementId = undefined, palletteSwatchSize = 10) {
+function drawSimilarityGrid(pallette, parentElementId = undefined, palletteSwatchSize = 10, clickCallback = ()=>{}) {
 	const palletteParent = parentElementId ? document.getElementById(parentElementId) : document.createElement('div')
 	if (!parentElementId) document.body.appendChild(palletteParent)
 
@@ -336,6 +355,7 @@ function drawSimilarityGrid(pallette, parentElementId = undefined, palletteSwatc
 	// top row
 	pallette.forEach((color, c) => palletteParent.appendChild(createSwatch(rgbToHex(...color), 1, c+2)) )
 
+	
 	// each subsequent row
 	pallette.forEach((color, r) => {
 		palletteParent.appendChild(createSwatch(rgbToHex(...color), r+2, 1))
@@ -343,15 +363,29 @@ function drawSimilarityGrid(pallette, parentElementId = undefined, palletteSwatc
 
 		// similarity chart
 		pallette.forEach((otherColor, c) => {
+			// only generate half of the chart, skip the duplicates
+			if ( c < r ) {
+				const placeholderSwatch = createSwatch('#ffffff', r+2, c+2)
+				placeholderSwatch.style.border = '1px solid white'
+				palletteParent.appendChild(placeholderSwatch)
+				return
+			}
+
+
 			const yuvOtherColor = RGBtoYUV(...otherColor)
 
-			var similarity = '#ffff00' // similar, but not same
-			if (!differentColors(yuvColor, yuvOtherColor)) similarity = '#ffffff' // are the same color
-			if (dissimilarColors(yuvColor, yuvOtherColor)) similarity = '#ffaa00'
-			if (veryDissimilarColors(yuvColor, yuvOtherColor)) similarity = '#ff0000'
+			const dissimilarity = dissimilarityScore(yuvColor, yuvOtherColor)
+			var similarity = '#ff00ff'
+			switch (dissimilarity) {
+				case 0: similarity = '#ffffff'; break
+				case 1: similarity = '#ffff00'; break
+				case 2: similarity = '#ffaa00'; break
+				case 3: similarity = '#ff0000'; break
+			}
 
 			const similaritySwatch = createSwatch(similarity, r+2, c+2)
 			similaritySwatch.style.border = '1px solid white'
+			similaritySwatch.onclick = () => clickCallback(yuvColor, yuvOtherColor, similaritySwatch)
 			palletteParent.appendChild(similaritySwatch)
 		})
 	})
@@ -418,7 +452,7 @@ function drawSplinesToSVGCanvas(svgCanvas, { splines, adjacencyList, pointsThatA
 			? [0,0,0] 
 			: pointsThatArePartOfGhostSplines[splinePointIndexes[0]]
 				? [220,220,220]
-				: [180,180,180]
+				: [70,70,180]
 		
 		var points = splinePointIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i).map(x_or_y => pixelSize*x_or_y))
 		for(var i = 0; i < points.length-1; i++) {
@@ -427,13 +461,19 @@ function drawSplinesToSVGCanvas(svgCanvas, { splines, adjacencyList, pointsThatA
 	})
 }
 
-function drawSplinesToRasterCanvas(rasterCanvas, { splines, pointsThatArePartOfContouringSplines }) {
+function drawSplinesToRasterCanvas(rasterCanvas, { splines, pointsThatArePartOfContouringSplines, pointsThatArePartOfGhostSplines }) {
 	splines.forEach(splinePointIndexes => {
 		var absolutePoints = splinePointIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i))
 		var absolutePoints_scaled = absolutePoints.map(point => [pixelSize*point[0], pixelSize*point[1]])
 		
+		var color = pointsThatArePartOfContouringSplines[splinePointIndexes[0]]
+			? [0,0,0] 
+			: pointsThatArePartOfGhostSplines[splinePointIndexes[0]]
+				? [220,220,220]
+				: [70,70,180]
+		
 		const splineObject = new ClampedClosedBSpline(4, absolutePoints_scaled)
-		splineObject.drawToCanvas(rasterCanvas.getContext('2d'), false, color=pointsThatArePartOfContouringSplines[splinePointIndexes[0]]?[0,0,0,255] : [120,120,220,255])
+		splineObject.drawToCanvas(rasterCanvas.getContext('2d'), false, color=color)
 	})
 }
 
@@ -441,19 +481,25 @@ function drawSplineObjectsToRasterCanvas(rasterCanvas, {splineObjects}) {
 	var context = rasterCanvas.getContext('2d')
 
 	splineObjects.forEach(splineObject => {
-		splineObject.drawToCanvas(rasterCanvas.getContext('2d'), false, [0,0,0,255], pixelSize)
+		var color = splineObject.isContouringSpline
+			? [0,0,0] 
+			: splineObject.isGhostSpline
+				? [220,220,220]
+				: [70,70,180]
+
+		splineObject.drawToCanvas(rasterCanvas.getContext('2d'), false, color, pixelSize)
 
 		// draw start and end points for debugging
 
-		context.beginPath();
-		context.arc(splineObject.points[0][0]*pixelSize, splineObject.points[0][1]*pixelSize, 3, 0, 2 * Math.PI, false);
-		context.fillStyle = 'green';
-		context.fill();
+		// context.beginPath();
+		// context.arc(splineObject.points[0][0]*pixelSize, splineObject.points[0][1]*pixelSize, 3, 0, 2 * Math.PI, false);
+		// context.fillStyle = 'green';
+		// context.fill();
 
 		
-		context.beginPath();
-		context.arc(splineObject.points[splineObject.points.length-1][0]*pixelSize, splineObject.points[splineObject.points.length-1][1]*pixelSize, 3, 0, 2 * Math.PI, false);
-		context.fillStyle = 'blue';
-		context.fill();
+		// context.beginPath();
+		// context.arc(splineObject.points[splineObject.points.length-1][0]*pixelSize, splineObject.points[splineObject.points.length-1][1]*pixelSize, 3, 0, 2 * Math.PI, false);
+		// context.fillStyle = 'blue';
+		// context.fill();
 	})
 }

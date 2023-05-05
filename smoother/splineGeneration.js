@@ -88,8 +88,14 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 		for (var y = 0; y < imgHeight; y++) {
 			var thisPixelVoronoiVerts = null
 			
-			thisPixelVoronoiVerts = [...voronoiVerts[x][y], voronoiVerts[x][y][0]].map(vert => voronoiVertexIndex_to_globallyUniqueIndex[vert](x, y)) 
-
+			try {
+				thisPixelVoronoiVerts = [...voronoiVerts[x][y], voronoiVerts[x][y][0]].map(vert => voronoiVertexIndex_to_globallyUniqueIndex[vert](x, y)) 
+			} catch (e) {
+				console.log('Voronoi vertex lookup error: ')
+				console.log({vert, x, y, thisPixelVoronoiVerts, voronoiVerts})
+				throw e
+			}
+			
 			for (var q = 0; q < nextNeighbors.length; q++) { // we'll only consider neighbors 0, 1, 2, and 3 in order to prevent duplicates. the pixels before this one will have 7 covered, and the pixels below will cover 4, 5, and 6
 				var i = nextNeighbors[q]
 				if (similarityGraph[x][y][i] && !(buildGhostSplines && differentColors(yuvImage[x][y], yuvImage[x+deltas[i][0]][y+deltas[i][1]]))) continue; // no splines exist on the boundries of similar pixels, unless we're building ghost splines
@@ -372,7 +378,13 @@ function computeSplinesByGlobalIndices_EDGE_METHOD(similarityGraph, voronoiVerts
 		for (var y = 0; y < imgHeight; y++) {
 			var thisPixelVoronoiVerts = null
 			
-			thisPixelVoronoiVerts = [...voronoiVerts[x][y], voronoiVerts[x][y][0]].map(vert => voronoiVertexIndex_to_globallyUniqueIndex[vert](x, y)) 
+			try {
+				thisPixelVoronoiVerts = [...voronoiVerts[x][y], voronoiVerts[x][y][0]].map(vert => voronoiVertexIndex_to_globallyUniqueIndex[vert](x, y)) 
+			} catch (e) {
+				console.log('Voronoi vertex lookup error: ')
+				console.log({vert, x, y, thisPixelVoronoiVerts, voronoiVerts})
+				throw e
+			}
 
 			for (var q = 0; q < nextNeighbors.length; q++) { // we'll only consider neighbors 0, 1, 2, and 3 in order to prevent duplicates. the pixels before this one will have 7 covered, and the pixels below will cover 4, 5, and 6
 				var i = nextNeighbors[q]
