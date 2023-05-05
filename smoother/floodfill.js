@@ -82,7 +82,8 @@ function floodfillNormalImage(colorCanvas, splineObjects, imgWidth, imgHeight, d
 
 					var rgba = getPixelData(x, y)
 					const abgr = (rgba[3] << 24) | (rgba[2] << 16) | (rgba[1] << 8) | (rgba[0])
-					retval.push([idx, abgr === black ? notQuiteBlack : abgr])
+					const abgrUnsigned = abgr >>> 0
+					retval.push([idx, abgrUnsigned === black ? notQuiteBlack : abgrUnsigned])
 				}
 			}
 			return retval
