@@ -176,10 +176,11 @@ function makeLine(svg, x1, y1, x2, y2, color=[0, 0, 0], width=1) {
 	return line
 }
 
-function makePolygon(svg, points, color="#000000") {
+function makePolygon(svg, points, color="#000000", strokeWidth=0.1) {
 	var polygon = document.createElementNS( svgns,'polygon' );
 	polygon.setAttributeNS( null,'points', points.map(([x, y]) => x+","+y).join(" ") );
 	if (color) polygon.setAttributeNS( null,'fill',color );
+	if (color && strokeWidth) { polygon.setAttributeNS( null,'stroke',color ); polygon.setAttributeNS( null,'stroke-width',String(strokeWidth) ); }
 	svg.appendChild(polygon)
 }
 
