@@ -22,6 +22,9 @@ var HEAL_3_COLOR_MEETINGS = true
 // var pixelSize // exists in smoother.js
 
 
+//
+// Compute and render
+//
 
 function rerender(partial=true) {
 	// init canvas (if necessary)
@@ -32,6 +35,11 @@ function rerender(partial=true) {
 			: initRaster(imgWidth*pixelSize, imgHeight*pixelSize, 'canvasRoot')
 
 		canvases[selected].id = selected + " canvas"
+
+		canvases[selected].onclick = 
+			selected.match(/\(.*\)/g)[0] === "(svg)" 
+			? svgCanvasClicked
+			: rasterCanvasClicked
 	}
 	
 	const canvas = canvases[selected]
@@ -198,6 +206,36 @@ function rerender_withoutOverlays(canvas, partial=true) {
 	}
 }
 
+//
+// Canvas clicked
+//
+
+// function modified from https://stackoverflow.com/a/42711775
+function svgCanvasClicked(evt) {
+	const svg = canvases[selected]
+	var pt = svg.createSVGPoint();  // Created once for document
+
+    pt.x = evt.clientX;
+    pt.y = evt.clientY;
+
+    // The cursor point, translated into svg coordinates
+    var cursorpt =  pt.matrixTransform(svg.getScreenCTM().inverse());
+    console.log("(" + cursorpt.x + ", " + cursorpt.y + ")");
+}
+
+// function modified from https://stackoverflow.com/a/42111623
+function rasterCanvasClicked(e) {
+	// e = Mouse click event.
+	var rect = e.target.getBoundingClientRect();
+	var x = e.clientX - rect.left; //x position within the element.
+	var y = e.clientY - rect.top;  //y position within the element.
+	console.log("Left? : " + x + " ; Top? : " + y + ".");
+}
+
+//
+// HTML Input element clicked
+//
+
 function renderTypeSelected(event) {
 	if (canvases[selected]) canvases[selected].style.display = 'none'
 
@@ -250,6 +288,11 @@ function similaritySwatchClicked(palletteColor1, palletteColor2, swatchElement) 
 	
 	swatchElement.style.border = '1px solid green'
 }
+
+
+//
+// main
+//
 
 function recompute() {
 	compute()
