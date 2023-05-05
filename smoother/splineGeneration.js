@@ -234,16 +234,58 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 	})
 
 
+	//
+	// Process the collected splines
+	//
 
+
+	// account for splines the user has forced to have a particular state
+	if (markedEdges && Object.keys(markedEdges).length) {
+
+		var len = splines.length
+		for (var i = 0; i < len; i++) {
+			var splineForcedState = undefined
+			var spline = splines[i]
+			
+			for (var j = 0; j < spline.length; j++) {
+				const edge = spline[j] + ' - ' + spline[j+1]
+				if (!markedEdges[edge]) continue
+				
+				if (splineForcedState && markedEdges[edge].toString() !== splineForcedState.toString()) {
+					// this spline was forced to be in two different states. To respect this, we must split it
+					splines.push(spline.slice(j)) // I do not like that "slice" and "splice" are so similarly named - the difference between the two is very important
+					spline.splice(j)
+					len++
+					break // don't worry, the code below will still trigger on this edge, it'll just happen when the outer loop reaches the newly added spline
+				}
+				
+				splineForcedState = markedEdges[edge]
+			}
+
+			if (splineForcedState) {
+				for (var j = 0; j < spline.length; j++) {
+					// go back and update all of the edges of the spline to match the forced edge
+					const edge = spline[j] + ' - ' + spline[j+1]
+					edgesThatArePartOfContourSplines[edge] = splineForcedState.isContouringSpline
+					edgesThatArePartOfGhostSplines[edge] = splineForcedState.isGhostSpline
+				}
+			}
+		}
+	}
+
+
+	// package splines into objects to store the points and metadata (spline type: contouring, normal, ghost) together
 	const packagedSplinePrototypes = splines.map((splinePoints, splineIndex) => {
 		var isGhostSpline = edgesThatArePartOfGhostSplines[splinePoints[0] + ' - ' + splinePoints[1]]
 		var isContouringSpline = edgesThatArePartOfContourSplines[splinePoints[0] + ' - ' + splinePoints[1]]
 		for(var i = 0; i < splinePoints.length-1; i++) {
-			if (edgesThatArePartOfGhostSplines[splinePoints[i] + ' - ' + splinePoints[i+1]] != isGhostSpline) {
+			const edge = splinePoints[i] + ' - ' + splinePoints[i+1]
+
+			if (edgesThatArePartOfGhostSplines[edge] != isGhostSpline) {
 				console.log({edgesThatArePartOfGhostSplines, splinePoints, splineIndex, i})
 				throw Error("Spline is partly ghost spline, partly not")
 			}
-			if (edgesThatArePartOfContourSplines[splinePoints[i] + ' - ' + splinePoints[i+1]] != isContouringSpline) {
+			if (edgesThatArePartOfContourSplines[edge] != isContouringSpline) {
 				console.log({edgesThatArePartOfContourSplines, splinePoints, splineIndex, i})
 				throw Error("Spline is partly contour spline, partly not")
 			}
@@ -255,6 +297,8 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 		}
 		return new SplinePrototype(splinePoints, isGhostSpline, isContouringSpline)
 	})
+
+
 
 
 	

@@ -294,8 +294,46 @@ function handleClick(x, y) {
 		console.log(edgeToState[edgeClicked])
 
 		// update edge state and redraw this edge
+		if (edgeToState[edgeClicked].isContouringSpline) {
+			edgeToState[edgeClicked] = {isContouringSpline: false, isGhostSpline: false}
+			markedEdges[edgeClicked] = {isContouringSpline: false, isGhostSpline: false}
+		} else if (edgeToState[edgeClicked].isGhostSpline) {
+			edgeToState[edgeClicked] = {isContouringSpline: true, isGhostSpline: false}
+			markedEdges[edgeClicked] = {isContouringSpline: true, isGhostSpline: false}
+		} else {
+			edgeToState[edgeClicked] = {isContouringSpline: false, isGhostSpline: true}
+			markedEdges[edgeClicked] = {isContouringSpline: false, isGhostSpline: true}
+		}
 
 		// redraw this edge
+		const color = edgeToState[edgeClicked].isContouringSpline
+			? [0,0,0] 
+			: edgeToState[edgeClicked].isGhostSpline
+				? [220,220,220]
+				: [130,130,220]
+
+		const edgePointIndexes = edgeClicked.split(' - ')
+		const points = edgePointIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i).map(x_or_y => pixelSize*x_or_y))
+
+		if (selected === "splines (raster)") {
+			const ctx = canvases[selected].getContext('2d')
+
+			var vector = [points[1][0]-points[0][0], points[1][1]-points[0][1]] // vector from this point to the next point
+			var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1]) // distance between this point and next point
+			var dirNormalized = [vector[0]/mag, vector[1]/mag]             // direction to next point
+			var magCiel = Math.ceil(mag)
+
+			var loc = [points[0][0], points[0][1]]
+			for (var j = 0; j <= magCiel+1; j++) {
+				ctx.fillStyle = "rgba("+color.map(c => c/255).toString()+","+(255/255)+")";
+				ctx.fillRect(loc[0], loc[1], 1, 1)
+
+				loc[0] += dirNormalized[0]
+				loc[1] += dirNormalized[1]
+			}
+		} else if (selected === "splines (svg)") {
+			makeLine(canvases[selected], ...points[0], ...points[1], color)
+		}
 	}
 
 }
