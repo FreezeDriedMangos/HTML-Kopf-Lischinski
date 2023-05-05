@@ -27,9 +27,8 @@ function smoothenByRandomDeletionAndHighDegree(packagedSplinePrototypes) {
 
 		const splineObject = new ClampedClosedBSpline(8, absolutePoints_scaled);
 
-		// TODO: improve this check - if a spline's second point (splinePointIndexes[1]) is part of a ghost/contour spline, is the whole spline necessarily a ghost/contour spline?
 		splineObject.isGhostSpline = packagedSplinePrototype.isGhostSpline
-		splineObject.isContouringSpline = packagedSplinePrototypes.isContouringSpline
+		splineObject.isContouringSpline = packagedSplinePrototype.isContouringSpline
 
 		return splineObject
 	})

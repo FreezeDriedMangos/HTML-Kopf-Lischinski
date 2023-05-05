@@ -482,7 +482,7 @@ function drawSplinesToRasterCanvas(rasterCanvas, { packagedSplinePrototypes, spl
 }
 
 function drawSplineObjectsToRasterCanvas(rasterCanvas, {splineObjects}) {
-	var context = rasterCanvas.getContext('2d')
+	// var context = rasterCanvas.getContext('2d')
 
 	splineObjects.forEach(splineObject => {
 		var color = splineObject.isContouringSpline

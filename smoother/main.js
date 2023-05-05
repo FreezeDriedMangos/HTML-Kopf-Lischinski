@@ -89,7 +89,6 @@ function compute(stoppingPoint) {
 	// smoothen splines
 	//
 
-	const {pointsThatArePartOfContouringSplines, pointsThatArePartOfGhostSplines} = computation_splines
 	computation_smothenedSplines = smoothenSplines(computation_splines.packagedSplinePrototypes)
 
 	// draw smoothened splines
