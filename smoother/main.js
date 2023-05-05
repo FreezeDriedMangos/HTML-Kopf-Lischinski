@@ -285,12 +285,18 @@ function handleClick(x, y) {
 
 	console.log('clicked ('+x+','+y+')')
 
-	const edgeClicked = pixelToEdge[x+','+y]
-	console.log('clicked edge  ' + edgeClicked)
+	if (selected === 'splines (svg)' || selected === 'splines (raster)') {
+		const edgeClicked = pixelToEdge[x+','+y]
+		console.log('clicked edge  ' + edgeClicked)
+		
+		if (!edgeClicked) return
+		
+		console.log(edgeToState[edgeClicked])
 
-	if (!edgeClicked) return
+		// update edge state and redraw this edge
 
-	console.log(edgeToState[edgeClicked])
+		// redraw this edge
+	}
 
 }
 
