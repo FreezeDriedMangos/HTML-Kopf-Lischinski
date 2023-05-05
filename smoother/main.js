@@ -373,7 +373,6 @@ function handleClick(x, y) {
 				}
 			}
 		} else if (selected === "splines (svg)") {
-			makeLine(canvases[selected], ...points[0], ...points[1], color)
 			const splinePointIndexes = computation_splines.packagedSplinePrototypes[splineFound].points
 		
 			var pts = splinePointIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i).map(x_or_y => pixelSize*x_or_y))
