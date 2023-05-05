@@ -56,23 +56,25 @@
 			<label for="floodfill blurred (raster)">floodfill blurred (raster)</label><br>
 
 			<br/>
-			<br/>
 
 			<input type="checkbox" id="drawSimilarityGraph" onchange="renderSimilarityGraphToggled(event)"/>
 			<label for="drawSimilarityGraph">Similarity Graph (svg options only)</label><br>
 
 			<input type="checkbox" id="blurBoundries" checked onchange="blurBoundriesToggled(event)"/>
 			<label for="blurBoundries">Blur Boundries (floodfill options only)</label><br>
-
 			
-			<br/>
 			<br/>
 
 			<button onclick="rerender()">
 				Rerender
-			</button>
-			
+			</button><br/>
+
 			<br/>
+			
+			<button onclick="recompute()">
+				Recompute
+			</button><br/>
+			
 			<br/>
 
 			<div id="palletteContainer" style="border: darkgray solid; background-color: white; margin: 10px; min-height: 40px;">
@@ -83,8 +85,11 @@
 
 		</div>
 
-		<div id="canvasRoot" style="border: black solid; margin: 10px; height: fit-content; width: fit-content;">
-
-		</div>
+		<div id="canvasRoot" style="border: black solid; margin: 10px; height: fit-content; width: fit-content;"></div>
+		
+		<br/>
+		<p>NOTE: splines drawn in black are known as "contouring splines", these are splines that separate two very different colors. Splines drawn in blue are regular splines, they separate somewhat different colors. Splines drawn in light grey are ghost splines, they separate two similar colors, and will be blended across in the "floodfill blurred (raster)" option.</p>
+		<br/>
+		<p>NOTE: click on the color swatches in the pallette similarity chart to make changes to the image. Red means the two colors are considred very dissimilar, orange means somewhat dissimilar, yellow means similar, and white means "are the exact same color". After changing the pallette similarity, click "recompute". This will rerun all the algorithms. Rerender simply redraws the image using the existing data cached from the last run of the smoother.</p>
 	</div>
 </body>
