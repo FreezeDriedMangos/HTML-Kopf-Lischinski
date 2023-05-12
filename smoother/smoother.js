@@ -28,6 +28,9 @@ const deltaDownLeft_index = 6
 const deltaRight_index = 3
 const deltaUpLeft_index = 0
 const deltaUpRight_index = 2
+const deltaUp_index = 1
+const deltaDown_index = 5
+const deltaLeft_index = 7
 
 //
 // Color Utility
@@ -256,6 +259,7 @@ var onInit = () => {}
 function init() {
 	// https://stackoverflow.com/a/8751659/9643841
 	var canvas = null;
+	var context2d = null
 	
 	function loadImage() {
 		var img = document.getElementById(inputImageElementID);
@@ -265,16 +269,16 @@ function init() {
 		canvas = document.createElement('canvas');
 		imgWidth = canvas.width = img.width+2;
 		imgHeight = canvas.height = img.height+2;
-		canvas.getContext('2d').imageSmoothingEnabled = false
-		canvas.getContext('2d').drawImage(img, 1, 1, img.width, img.height);
-		console.log({imgWidth, imgHeight})
+		context2d = canvas.getContext('2d')
+		context2d.imageSmoothingEnabled = false
+		context2d.drawImage(img, 1, 1, img.width, img.height);
 
 		// TODO: make an imageWidth+2 by imageHeight+2 array and fill it with the colors of the image, the 1 pixel wide ring on the edges should be filled with [0,0,0,0]
 		// then make getPixelData read from this array
 		// lastly, actually add 2 to the stored values of imageWidth/imageHeight so they reflect the size of the new array
 	}
 	getPixelData = (x, y) => {
-		return canvas.getContext('2d').getImageData(x, y, 1, 1).data;
+		return context2d.getImageData(x, y, 1, 1).data;
 	}
 	loadImage();
 

@@ -26,6 +26,7 @@ function computeSimilarityGraph(imgWidth, imgHeight, getPixelData) {
 				var delta = deltas[i]
 				var newX = x + delta[0]
 				var newY = y + delta[1]
+
 				try { similarityGraph[x][y].push(!dissimilarColors(yuvImage[x][y], yuvImage[newX][newY])) } 
 				catch { similarityGraph[x][y].push(false) }
 			}
@@ -45,7 +46,10 @@ function computeSimilarityGraph(imgWidth, imgHeight, getPixelData) {
 			if (!diag1 || !diag2) continue; // no crossing
 
 			// check for fully connected
-			var fullyConnected = similarityGraph[x][y][deltaRight_index] // if a pixel from one diagonal is similar to a pixel from another diagonal, all four pixels are similar. we can remove both diagonals
+			var fullyConnected = similarityGraph[x][y][deltaRight_index] // (x,y)comp(x+1,y)
+							  && similarityGraph[x][y][deltaDown_index]  // (x,y)comp(x,y+1)
+							  && similarityGraph[x+1][y+1][deltaLeft_index]  // (x+1,y+1)comp(x,y+1)
+							  && similarityGraph[x+1][y+1][deltaUp_index]  // (x+1,y+1)comp(x+1,y)
 			if (fullyConnected)
 				removeDiag1 = removeDiag2 = true
 			else {
