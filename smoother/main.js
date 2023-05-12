@@ -164,9 +164,9 @@ function rerender_withoutOverlays(canvas, partial=true) {
 			const splinePointIndexes = packagedSplinePrototype.points
 	
 			var absolutePoints = splinePointIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i))
-			var absolutePoints_scaled = absolutePoints.map(point => [pixelSize*point[0], pixelSize*point[1]])
+			// var absolutePoints_scaled = absolutePoints.map(point => [pixelSize*point[0], pixelSize*point[1]])
 			
-			const splineObject = new ClampedClosedBSpline(4, absolutePoints_scaled)
+			const splineObject = new ClampedClosedBSpline(4, absolutePoints)
 			splineObject.isContouringSpline = packagedSplinePrototype.isContouringSpline
 			splineObject.isGhostSpline = packagedSplinePrototype.isGhostSpline
 			return splineObject
@@ -424,6 +424,7 @@ function handleClick(x, y) {
 			forcedSimilarities[`${x+1},${y}-${deltaLeft_index}`] = !computation_similarityGraph.similarityGraph[x+1][y][deltaLeft_index]
  		} else {
 			console.log('TODO')
+
 			// dealing with the crossing formed from the diagonal connections between 
 			// [
 			// 	[x, y],
