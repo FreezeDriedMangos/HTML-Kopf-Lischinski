@@ -297,6 +297,9 @@ function rasterCanvasClicked(e) {
 
 // both types of canvas click handler return the same coordinates when the mouse clicks the same place, so we can have just one click handler :)
 function handleClick(x, y) {
+	var xfloat = x
+	var yfloat = y
+
 	x = Math.floor(x)
 	y = Math.floor(y)
 
@@ -382,31 +385,57 @@ function handleClick(x, y) {
 			}
 		}
 
-	} else if (selected === 'raw (svg)') {
+	} else if (selected.endsWith('(svg)') && drawSimilarityGrid) {
+		xfloat /= pixelSize
+		yfloat /= pixelSize
+		x /= pixelSize
+		y /= pixelSize
+		x = Math.trunc(x)
+		y = Math.trunc(y)
 
-		if (!p1) {
-			p1 = [Math.trunc(x/pixelSize), Math.trunc(y/pixelSize)]
-			return
-		} else {
-			var p2 = [Math.trunc(x/pixelSize), Math.trunc(y/pixelSize)]
-			var rgb1 = getPixelData(...p1)
-			var rgb2 = getPixelData(...p2)
-			console.log(`${p1} <-> ${p2} = ${dissimilarityScore(RGBtoYUV(...rgb1), RGBtoYUV(rgb2))}`)
-			console.log(`${p2} <-> ${p1} = ${dissimilarityScore(RGBtoYUV(...rgb2), RGBtoYUV(rgb1))}`)
+		if (xfloat % 1 < 0.5) x -= 1
+		if (yfloat % 1 < 0.5) y -= 1
 
-			var d1 = deltas.map((d, i) => ""+d === ""+[p2[0]-p1[0], p2[1]-p1[1]] ? i : undefined).filter(v => v != undefined)[0]
-			var d2 = deltas.map((d, i) => ""+d === ""+[p1[0]-p2[0], p1[1]-p2[1]] ? i : undefined).filter(v => v != undefined)[0]
-			console.log(`${p1} -> ${p2} = ${computation_similarityGraph.similarityGraph[p1[0]][p1[1]][d1]} (${d1})`)
-			console.log(`${p2} -> ${p1} = ${computation_similarityGraph.similarityGraph[p2[0]][p2[1]][d2]} (${d2})`)
+		if (x < 0 || y < 0 || x+1 >= imgWidth || y+1 >= imgHeight) return
+		
+		// console.log(`Pixels in question: `)
+		// console.log([
+		// 	[x, y],
+		// 	[x+1, y],
+		// 	[x, y+1],
+		// 	[x+1, y+1],
+		// ])
 
-			p1 = undefined
+		// const deltaIndex = deltas.map((d, i) => ""+d === ""+[p2[0]-p1[0], p2[1]-p1[1]] ? i : undefined).filter(v => v != undefined)[0]
+		
+		const pixelMidXClicked = (0.333 < (xfloat%1)) && ((xfloat%1) < 0.666)
+		const pixelMidYClicked = (0.333 < (yfloat%1)) && ((yfloat%1) < 0.666)
+		
+		if (pixelMidXClicked && pixelMidYClicked) return // user clicked the very center of the pixel, no connection to deal with
+		if (pixelMidXClicked) {
+			console.log('vertical')
+			// we're dealing with (x, y) and (x, y+1)'s connection only
+			forcedSimilarities[`${x},${y}-${deltaDown_index}`] = !computation_similarityGraph.similarityGraph[x][y][deltaDown_index]
+			forcedSimilarities[`${x},${y+1}-${deltaUp_index}`] = !computation_similarityGraph.similarityGraph[x][y+1][deltaUp_index]
+		} else if (pixelMidYClicked) {
+			console.log('horizontal')
+			// we're dealing with (x, y) and (x+1, y)'s connection only
+			forcedSimilarities[`${x},${y}-${deltaRight_index}`] = !computation_similarityGraph.similarityGraph[x][y][deltaRight_index]
+			forcedSimilarities[`${x+1},${y}-${deltaLeft_index}`] = !computation_similarityGraph.similarityGraph[x+1][y][deltaLeft_index]
+ 		} else {
+			console.log('TODO')
+			// dealing with the crossing formed from the diagonal connections between 
+			// [
+			// 	[x, y],
+			// 	[x+1, y],
+			// 	[x, y+1],
+			// 	[x+1, y+1],
+			// ]
 		}
 
 	}
 
 }
-
-var p1 = undefined
 
 //
 // HTML Input element clicked

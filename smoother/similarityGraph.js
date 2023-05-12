@@ -1,3 +1,4 @@
+var forcedSimilarities = {}
 
 function computeSimilarityGraph(imgWidth, imgHeight, getPixelData) {
 	// compute the yuv colorspace values of each pixel
@@ -108,6 +109,13 @@ function computeSimilarityGraph(imgWidth, imgHeight, getPixelData) {
 				similarityGraph[x][y+1][deltaUpRight_index] = false
 			}
 		}
+
+		// apply the forced similarites
+		Object.entries(forcedSimilarities).forEach(([pairString, value]) => {
+			// pairstring is expected to be of form "x0,y0-deltaIndex"
+			const coords = pairString.split('-').map(coordString => coordString.split(',').map(numString => parseInt(numString)))
+			similarityGraph[coords[0][0]][coords[0][1]][coords[1]] = value
+		})
 	}
 
 	return {
