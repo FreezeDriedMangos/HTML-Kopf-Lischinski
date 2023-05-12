@@ -381,9 +381,32 @@ function handleClick(x, y) {
 				makeLine(canvases[selected], ...pts[i], ...pts[i+1], color)
 			}
 		}
+
+	} else if (selected === 'raw (svg)') {
+
+		if (!p1) {
+			p1 = [Math.trunc(x/pixelSize), Math.trunc(y/pixelSize)]
+			return
+		} else {
+			var p2 = [Math.trunc(x/pixelSize), Math.trunc(y/pixelSize)]
+			var rgb1 = getPixelData(...p1)
+			var rgb2 = getPixelData(...p2)
+			console.log(`${p1} <-> ${p2} = ${dissimilarityScore(RGBtoYUV(...rgb1), RGBtoYUV(rgb2))}`)
+			console.log(`${p2} <-> ${p1} = ${dissimilarityScore(RGBtoYUV(...rgb2), RGBtoYUV(rgb1))}`)
+
+			var d1 = deltas.map((d, i) => ""+d === ""+[p2[0]-p1[0], p2[1]-p1[1]] ? i : undefined).filter(v => v != undefined)[0]
+			var d2 = deltas.map((d, i) => ""+d === ""+[p1[0]-p2[0], p1[1]-p2[1]] ? i : undefined).filter(v => v != undefined)[0]
+			console.log(`${p1} -> ${p2} = ${computation_similarityGraph.similarityGraph[p1[0]][p1[1]][d1]} (${d1})`)
+			console.log(`${p2} -> ${p1} = ${computation_similarityGraph.similarityGraph[p2[0]][p2[1]][d2]} (${d2})`)
+
+			p1 = undefined
+		}
+
 	}
 
 }
+
+var p1 = undefined
 
 //
 // HTML Input element clicked
