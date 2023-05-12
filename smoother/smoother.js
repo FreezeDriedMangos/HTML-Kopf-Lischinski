@@ -236,7 +236,8 @@ var openFile = function(file) {
 		console.log(image.height)
 
 		if (image.width === 0 || image.height === 0) {
-			document.getElementById("warning").innerHTML+= "Image failed to load. Please refresh and try again. (this is very buggy, it will probably work on the 3rd try)"
+			alert('Image failed to load. Please refresh the page and try again.')
+			// document.getElementById("warning").innerHTML+= "Image failed to load. Please refresh and try again. (this is very buggy, it will probably work on the 3rd try)"
 		}
 		
 		init()
@@ -269,6 +270,11 @@ function init() {
 		canvas = document.createElement('canvas');
 		imgWidth = canvas.width = img.width+2;
 		imgHeight = canvas.height = img.height+2;
+
+		if (imgWidth * imgHeight > 10000) {
+			alert('Warning! Selected image is very big. It is reccomended you refresh the page now before your browser freezes trying to run the algorithm.')
+		}
+
 		context2d = canvas.getContext('2d')
 		context2d.imageSmoothingEnabled = false
 		context2d.drawImage(img, 1, 1, img.width, img.height);
