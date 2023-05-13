@@ -198,10 +198,11 @@ function rerender_withoutOverlays(canvas, partial=true) {
 		// if there are no ghost splines, just return, since there's nothing to blur
 		if (splineObjects.filter(spline => spline.isGhostSpline).length <= 0) return
 
+		const blurEpicenters = []
 		const boundaries = []
 		const w = imgWidth*pixelSize;
 		splineObjects.forEach(splineObject => {
-			if (splineObject.isGhostSpline) return // if it's a ghost spline, it's not a boundary
+			const destination = splineObject.isGhostSpline ? blurEpicenters : boundaries
 
 			var path = splineObject.toPath(pixelSize)
 			for (var i = 0; i < path.length-1; i++) {
@@ -209,11 +210,11 @@ function rerender_withoutOverlays(canvas, partial=true) {
 				var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1]) // distance between this point and next point
 				var dirNormalized = [vector[0]/mag, vector[1]/mag]             // direction to next point
 				var magCiel = Math.ceil(mag)
-
+				
 				var loc = [path[i][0], path[i][1]]
 				for (var j = 0; j <= magCiel+1; j++) {
 					const indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
-					boundaries.push(indx)
+					destination.push(indx)
 					loc[0] += dirNormalized[0]
 					loc[1] += dirNormalized[1]
 				}
@@ -221,7 +222,7 @@ function rerender_withoutOverlays(canvas, partial=true) {
 		})
 
 		// for (var i = 0; i < 3; i++) gauss(canvas, 1, boundaries)
-		gauss(canvas, pixelSize, boundaries)
+		gauss(canvas, pixelSize, boundaries, blurEpicenters)
 		if (partial) return
 	}
 }
