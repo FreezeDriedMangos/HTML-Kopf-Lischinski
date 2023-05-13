@@ -141,7 +141,7 @@ function computeLocalVoronoiVertsPerPixel(similarityGraph, imgWidth, imgHeight) 
 	// 01100100 -> 00110010 -> 01001100
 	//
 	//
-	// each pixel will be conversion into some polygon. but because of the rules of this conversion, (and some other outside factors, such as no lines crossing, pixels being perfectly aligned to grid, etc)
+	// each pixel will be converted into some polygon. but because of the rules of this conversion, (and some other outside factors, such as no lines crossing, pixels being perfectly aligned to grid, etc)
 	// there are actually only 12 possible points for each vertex to be placed, relative to the center of the pixel. I've labeled each position with an index below. The square is the original bounds of the pixel
 	// (note for who's interested: I chose this ordering of the 12 possible vertices by ordering the vertices by their angle from the center pixel)
 	//
