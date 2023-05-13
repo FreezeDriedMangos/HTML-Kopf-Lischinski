@@ -195,7 +195,10 @@ function rerender_withoutOverlays(canvas, partial=true) {
 	if (selected === 'floodfill blurred (raster)') {
 		floodfillNormalImage(canvas, splineObjects, imgWidth, imgHeight, deltas, similarityGraph, getPixelData, yuvImage)
 
-		const boundaries = {}
+		// if there are no ghost splines, just return, since there's nothing to blur
+		if (splineObjects.filter(spline => spline.isGhostSpline).length <= 0) return
+
+		const boundaries = []
 		const w = imgWidth*pixelSize;
 		splineObjects.forEach(splineObject => {
 			if (splineObject.isGhostSpline) return // if it's a ghost spline, it's not a boundary
@@ -210,14 +213,15 @@ function rerender_withoutOverlays(canvas, partial=true) {
 				var loc = [path[i][0], path[i][1]]
 				for (var j = 0; j <= magCiel+1; j++) {
 					const indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
-					boundaries[indx] = true
+					boundaries.push(indx)
 					loc[0] += dirNormalized[0]
 					loc[1] += dirNormalized[1]
 				}
 			}
 		})
 
-		for (var i = 0; i < 3; i++) gauss(canvas, 1, boundaries)
+		// for (var i = 0; i < 3; i++) gauss(canvas, 1, boundaries)
+		gauss(canvas, pixelSize, boundaries)
 		if (partial) return
 	}
 }
