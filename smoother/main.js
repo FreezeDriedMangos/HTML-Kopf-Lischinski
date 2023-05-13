@@ -215,6 +215,8 @@ function rerender_withoutOverlays(canvas) {
 		const boundaries = []
 		const w = imgWidth*pixelSize;
 		splineObjects.forEach(splineObject => {
+			if (splineObject.isGhostSpline) return // ghost splines are not boundaries
+
 			var path = splineObject.toPath(pixelSize)
 			for (var i = 0; i < path.length-1; i++) {
 				var vector = [path[i+1][0]-path[i][0], path[i+1][1]-path[i][1]] // vector from this point to the next point
