@@ -518,6 +518,7 @@ function main() {
 	document.getElementById('raw (svg)').checked = true
 	document.getElementById('drawSimilarityGraph').checked = showSimilarityGraph
 	document.getElementById('blurBoundries').checked = blurBoundries
+	document.getElementById('upscaleFactor').value = pixelSize
 
 	palletteOverrides = {} // clear overrides, we'll be getting a new pallette anyway
 
