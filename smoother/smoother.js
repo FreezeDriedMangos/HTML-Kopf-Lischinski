@@ -237,7 +237,6 @@ var openFile = function(file) {
 
 		if (image.width === 0 || image.height === 0) {
 			alert('Image failed to load. Please refresh the page and try again.')
-			// document.getElementById("warning").innerHTML+= "Image failed to load. Please refresh and try again. (this is very buggy, it will probably work on the 3rd try)"
 		}
 		
 		init()

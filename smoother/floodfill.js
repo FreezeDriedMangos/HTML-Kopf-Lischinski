@@ -224,7 +224,7 @@ function floodfillEdgeDistanceFieldImage(colorCanvas, splineObjects, imgWidth) {
 		(d32) => {
 			const retval = []
 			const visited = {}
-			// draw boundaries
+			// seed boundaries
 			splineObjects.forEach(splineObject => {
 				// canvas.lineTo doesn't support full alpha, so I made my own drawing code
 				var path = splineObject.toPath(pixelSize)
@@ -266,6 +266,48 @@ function floodfillEdgeDistanceFieldImage(colorCanvas, splineObjects, imgWidth) {
 	)
 }
 
+
+function floodfillGhostEdgeDistanceFieldImage(colorCanvas, splineObjects, imgWidth) {
+	const w = imgWidth*pixelSize;
+	const gradientFalloff = 1/255
+
+	floodfill(colorCanvas,
+		(d32) => {},
+		(d32) => {
+			const retval = []
+			const visited = {}
+			// seed boundaries
+			splineObjects.forEach(splineObject => {
+				// canvas.lineTo doesn't support full alpha, so I made my own drawing code
+				var path = splineObject.toPath(pixelSize)
+				for (var i = 0; i < path.length-1; i++) {
+					var vector = [path[i+1][0]-path[i][0], path[i+1][1]-path[i][1]]
+					var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1])
+					var dirNormalized = [vector[0]/mag, vector[1]/mag]
+					var magCiel = Math.ceil(mag)
+
+					const borderColor = 0xffffffff
+
+					var loc = [path[i][0], path[i][1]]
+					for (var j = 0; j <= magCiel; j++) {
+						const indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
+						if (!visited[indx]) {
+							d32[indx] = borderColor
+							// TODO: don't push if indx is a point on another non-ghost spline
+							if (splineObject.isGhostSpline) retval.push([indx, borderColor]) // only seed ghost splines
+							visited[indx] = true
+						}
+						loc[0] += dirNormalized[0]
+						loc[1] += dirNormalized[1]
+					}
+				}
+			})
+			return retval
+		},
+		(d32) => {},
+		gradientFalloff
+	)
+}
 
 // high performance flood fill modified from https://codereview.stackexchange.com/a/212994
 const floodfill = function (colorCanvas, preseedCallback, seedFunction, cleanupCallback, gradientFalloff) {

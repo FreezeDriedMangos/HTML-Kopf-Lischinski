@@ -26,7 +26,7 @@ var HEAL_3_COLOR_MEETINGS = true
 // Compute and render
 //
 
-function rerender(partial=true) {
+function rerender() {
 	// init canvas (if necessary)
 	if (!canvases[selected]) {
 		canvases[selected] = 
@@ -49,7 +49,7 @@ function rerender(partial=true) {
 	else canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height)
 
 	// rerender
-	rerender_withoutOverlays(canvas, partial)
+	rerender_withoutOverlays(canvas)
 	if (showSimilarityGraph && selected.match(/\(.*\)/g)[0] === "(svg)") drawSimilarityGraphToSVGCanvas(canvas, imgWidth, imgHeight, computation_similarityGraph.similarityGraph)
 }
 
@@ -95,7 +95,7 @@ function compute(stoppingPoint) {
 	if (stoppingPoint === 'smooth splines (raster)') return
 }
 
-function rerender_withoutOverlays(canvas, partial=true) {
+function rerender_withoutOverlays(canvas) {
 
 	const {similarityGraph, yuvImage} = computation_similarityGraph
 	const {voronoiVerts} = computation_voronoi
@@ -107,7 +107,7 @@ function rerender_withoutOverlays(canvas, partial=true) {
 
 	if (selected === 'raw (svg)') {
 		drawInputToSVGCanvas(canvas, imgWidth, imgHeight)
-		if (partial) return
+		return
 	}
 	
 	//
@@ -116,7 +116,7 @@ function rerender_withoutOverlays(canvas, partial=true) {
 
 	if (selected === 'voronoi (svg)') {
 		drawVoronoiToSVGCanvas(canvas, imgWidth, imgHeight, voronoiVerts, voronoiCellVertexPositions)
-		if (partial) return
+		return
 	}
 
 
@@ -127,13 +127,13 @@ function rerender_withoutOverlays(canvas, partial=true) {
 	// draw splines approximation (SVG)
 	if (selected === 'splines (svg)') {
 		drawSplinesToSVGCanvas(canvas, computation_splines)
-		if (partial) return
+		return
 	}
 
 	// draw splines
 	if (selected === 'splines (raster)') {
 		drawSplinesToRasterCanvas(canvas, computation_splines)
-		if (partial) return
+		return
 	}
 
 	//
@@ -143,7 +143,7 @@ function rerender_withoutOverlays(canvas, partial=true) {
 	// draw smoothened splines
 	if (selected === 'smooth splines (raster)') {
 		drawSplineObjectsToRasterCanvas(canvas, {splineObjects})
-		if (partial) return
+		return
 	}
 
 	//
@@ -173,37 +173,48 @@ function rerender_withoutOverlays(canvas, partial=true) {
 		})
 
 		floodfillNormalImage(canvas, objs, imgWidth, imgHeight, deltas, similarityGraph, getPixelData, yuvImage, blurBoundries)
-		if (partial) return
+		return
 	}
 
 	if (selected === 'floodfill (raster)') {
 		floodfillNormalImage(canvas, splineObjects, imgWidth, imgHeight, deltas, similarityGraph, getPixelData, yuvImage, blurBoundries)
-		if (partial) return
+		return
 	}
 	
 	if (selected === 'direction (raster)') {
 		floodfillDirectionVectorsImage(canvas, splineObjects, imgWidth)
-		if (partial) return
+		return
 	}
 	
 	if (selected === 'distance field (raster)') {
 		floodfillEdgeDistanceFieldImage(canvas, splineObjects, imgWidth)
-		if (partial) return
+		return
+	}
+	
+	if (selected === 'blur distance field (raster)') { // each pixel's distance from the nearest pixel of another color that can be blurred with
+		floodfillGhostEdgeDistanceFieldImage(canvas, splineObjects, imgWidth)
+		return
 	}
 
-
 	if (selected === 'floodfill blurred (raster)') {
+		console.log('computing blur distances')
+
+		// selected = 'blur distance field (raster)'
+		// rerender()
+		// selected = 'floodfill blurred (raster)'
+
+		console.log('setting up blur base image')
+
 		floodfillNormalImage(canvas, splineObjects, imgWidth, imgHeight, deltas, similarityGraph, getPixelData, yuvImage)
+
+		console.log('computing boundaries for blur')
 
 		// if there are no ghost splines, just return, since there's nothing to blur
 		if (splineObjects.filter(spline => spline.isGhostSpline).length <= 0) return
 
-		const blurEpicenters = []
 		const boundaries = []
 		const w = imgWidth*pixelSize;
 		splineObjects.forEach(splineObject => {
-			const destination = splineObject.isGhostSpline ? blurEpicenters : boundaries
-
 			var path = splineObject.toPath(pixelSize)
 			for (var i = 0; i < path.length-1; i++) {
 				var vector = [path[i+1][0]-path[i][0], path[i+1][1]-path[i][1]] // vector from this point to the next point
@@ -214,16 +225,20 @@ function rerender_withoutOverlays(canvas, partial=true) {
 				var loc = [path[i][0], path[i][1]]
 				for (var j = 0; j <= magCiel+1; j++) {
 					const indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
-					destination.push(indx)
+					boundaries.push(indx)
 					loc[0] += dirNormalized[0]
 					loc[1] += dirNormalized[1]
 				}
 			}
 		})
 
+		console.log('beginning blur')
+
 		// for (var i = 0; i < 3; i++) gauss(canvas, 1, boundaries)
-		gauss(canvas, pixelSize, boundaries, blurEpicenters)
-		if (partial) return
+		gauss(canvas, pixelSize, boundaries, canvases['blur distance field (raster)']?.getContext('2d').getImageData(0, 0, canvas.width,canvas.height).data)
+
+		console.log('complete')
+		return
 	}
 }
 
@@ -309,6 +324,7 @@ function handleClick(x, y) {
 	y = Math.floor(y)
 
 	console.log('clicked ('+x+','+y+')')
+	console.log(canvases[selected].getContext('2d').getImageData(0, 0, canvases[selected].width, canvases[selected].height).data[(y*canvases[selected].width + x)*4 + 1])
 
 	if (selected === 'splines (svg)' || selected === 'splines (raster)') {
 		const edgeClicked = pixelToEdge[x+','+y]

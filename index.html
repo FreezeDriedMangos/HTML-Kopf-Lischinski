@@ -30,6 +30,9 @@
 
 			TODO: add a checkbox to make ghost splines follow voronoi borders (or just do it by default) <br/>
 			<br/>
+			TODO: make all the global variables that control the computation (eg markedEdges, forcedSimilarities) into parameters of the computation functions (store the user input globally in main.js)
+			<br/>
+			<br/>
 
 			<input type="radio" id="raw (svg)" name="render type" onchange="renderTypeSelected(event)" checked>
 			<label for="raw (svg)">raw (svg)</label><br>
@@ -57,6 +60,9 @@
 
 			<input type="radio" id="distance field (raster)" name="render type" onchange="renderTypeSelected(event)">
 			<label for="distance field (raster)">distance field (raster)</label><br>
+
+			<input type="radio" id="blur distance field (raster)" name="render type" onchange="renderTypeSelected(event)">
+			<label for="blur distance field (raster)">blur distance field (raster)</label><br>
 
 			<input type="radio" id="floodfill blurred (raster)" name="render type" onchange="renderTypeSelected(event)">
 			<label for="floodfill blurred (raster)">floodfill blurred (raster)</label><br>
