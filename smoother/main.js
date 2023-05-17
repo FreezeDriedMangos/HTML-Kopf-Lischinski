@@ -328,7 +328,6 @@ function handleClick(x, y) {
 	y = Math.floor(y)
 
 	console.log('clicked ('+x+','+y+')')
-	console.log(canvases[selected].getContext('2d').getImageData(0, 0, canvases[selected].width, canvases[selected].height).data[(y*canvases[selected].width + x)*4 + 1])
 
 	if (selected === 'splines (svg)' || selected === 'splines (raster)') {
 		const edgeClicked = pixelToEdge[x+','+y]
