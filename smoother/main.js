@@ -535,15 +535,21 @@ function resetUIControls() {
 }
 
 function recompute() {
+	Object.values(canvases).forEach(canvas => canvas.remove())
+	canvases = {} // canvases need to be rebuilt with the new size
+
 	try {
-		Object.values(canvases).forEach(canvas => canvas.remove())
-		canvases = {} // canvases need to be rebuilt with the new size
-		
 		compute()
 		compileSplineObjectPixels() // bonus computation used for ui only
+	} catch (e) {
+		window.alert("Something went wrong during computation.")
+		console.error(e)
+	}
+
+	try {
 		rerender()
 	} catch (e) {
-		window.alert("Something went wrong.")
+		window.alert("Something went wrong during rendering.")
 		console.error(e)
 	}
 }
