@@ -1,6 +1,8 @@
 
 
 // voronoi constants
+const square = [1, 5, 9, 13]
+
 const connectionPatterns_toVoronoiVerts = {
 	"00000000": [0, 4, 8, 12],
 
@@ -234,6 +236,7 @@ function computeLocalVoronoiVertsPerPixel(similarityGraph, imgWidth, imgHeight) 
 			
 			// nothing found
 			console.log("No pattern matched for " + patternBitstring)
+			// voronoiVerts[x][y] = square
 		}
 	}
 
@@ -251,6 +254,79 @@ function heal3ColorMeetings(voronoiVerts, yuvImage, imgWidth, imgHeight) {
 		return true
 	}
 
+
+	//            2    3
+	//   
+	//       1--------------5
+	//       |              |
+	//  15   |    0    4    |    6
+	//       |              |
+	//  14   |   12    8    |    7
+	//       |              |
+	//      13--------------9
+	//
+	//           11   10
+	
+
+	for (var x = 0; x < imgWidth; x++) {
+		for (var y = 0; y < imgHeight; y++) {
+			voronoiVerts[x][y] = [...voronoiVerts[x][y]] // clone the array before modifying it - all voronoi cells of the same shape share the same array reference by default
+		}
+	}
+
+	//
+	//
+	// fix overlap
+	//
+	//
+
+	// if a given pixel has a vertex outside its usual square area (eg 10)
+	// and the neighboring pixel does not have the corresponding vertex inside its square area (eg 4)
+	// then that vertex is causing an overlap
+	// remove that vertex and replace it with the nearest one (eg 9)
+	// finally, remove duplicates
+	for (var x = 0; x < imgWidth; x++) {
+		for (var y = 0; y < imgHeight; y++) {
+			
+			// above neighbor
+			if (voronoiVerts[x][y].includes(3) && !voronoiVerts[x][y-1].includes(8))
+				replaceElement(voronoiVerts[x][y], 3, 5) 
+			if (voronoiVerts[x][y].includes(2) && !voronoiVerts[x][y-1].includes(12))
+				replaceElement(voronoiVerts[x][y], 2, 1) 
+			
+			// right neighbor
+			if (voronoiVerts[x][y].includes(6) && !voronoiVerts[x+1][y].includes(0))
+				replaceElement(voronoiVerts[x][y], 6, 5) 
+			if (voronoiVerts[x][y].includes(7) && !voronoiVerts[x+1][y].includes(12))
+				replaceElement(voronoiVerts[x][y], 7, 9) 
+
+			// below neighbor
+			if (voronoiVerts[x][y].includes(10) && !voronoiVerts[x][y+1].includes(4))
+				replaceElement(voronoiVerts[x][y], 10, 9) 
+			if (voronoiVerts[x][y].includes(11) && !voronoiVerts[x][y+1].includes(0))
+				replaceElement(voronoiVerts[x][y], 11, 13) 
+			
+			// left neighbor
+			if (voronoiVerts[x][y].includes(14) && !voronoiVerts[x-1][y].includes(8))
+				replaceElement(voronoiVerts[x][y], 14, 13) 
+			if (voronoiVerts[x][y].includes(15) && !voronoiVerts[x-1][y].includes(4))
+				replaceElement(voronoiVerts[x][y], 15, 1) 
+
+			// remove duplicates
+			voronoiVerts[x][y] = voronoiVerts[x][y].reduce((snowball, snow) => {
+				if (snowball.length && snowball[snowball.length-1] === snow) return snowball
+				snowball.push(snow)
+				return snowball
+			}, [])
+		}
+	}
+
+	//
+	//
+	// close gaps
+	//
+	//
+
 	// better healing: pick one of the four involved corners to explode
 	// pick the corner with the fewest connections, breaking ties by the angle (eg an acute angle beats a right angle beats a straight line) (11 beats 101/0101 beats 1001 beats 10001)
 	// then, on the exploding corner, find the vertex not shared by any of the four involved pixels. mark this index.
@@ -260,6 +336,9 @@ function heal3ColorMeetings(voronoiVerts, yuvImage, imgWidth, imgHeight) {
 
 	for (var x = 0; x < imgWidth-1; x++) {
 		for (var y = 0; y < imgHeight-1; y++) {
+
+			// TODO: don't check color similarity, use the similarity graph instead
+
 			if (!dissimilarColors(yuvImage[x][y], yuvImage[x+1][y+1]) || !dissimilarColors(yuvImage[x+1][y], yuvImage[x][y+1])) continue; // don't cross connected diagonals
 
 			var dissimilars = []
@@ -283,10 +362,6 @@ function heal3ColorMeetings(voronoiVerts, yuvImage, imgWidth, imgHeight) {
 
 			if (atLeastThreeDissimilars) {
 				// if any of these four pixels have an inset corner, pop that corner back out
-				voronoiVerts[x][y]     = [...voronoiVerts[x][y]];
-				voronoiVerts[x+1][y]   = [...voronoiVerts[x+1][y]];
-				voronoiVerts[x][y+1]   = [...voronoiVerts[x][y+1]];
-				voronoiVerts[x+1][y+1] = [...voronoiVerts[x+1][y+1]];
 				replaceElement(voronoiVerts[x][y],     8,  9) 
 				replaceElement(voronoiVerts[x+1][y],   12, 13) 
 				replaceElement(voronoiVerts[x][y+1],   4,  5) 
