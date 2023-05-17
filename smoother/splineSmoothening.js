@@ -8,9 +8,10 @@ function smoothenByRandomDeletionAndHighDegree(packagedSplinePrototypes) {
 		const splinePointIndexes = packagedSplinePrototype.points
 
 		var newIndexes = [...splinePointIndexes]
+		var newColors = [...packagedSplinePrototype.colors]
 		for (var i = 1; i < newIndexes.length-1; i++) {
 			if (newIndexes.length < 8) break;
-			if (Math.random() > 0.6) newIndexes.splice(i, 1)
+			if (Math.random() > 0.6) { newIndexes.splice(i, 1); newColors.splice(i, 1); }
 		}
 		
 		var absolutePoints = newIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i))
@@ -29,6 +30,8 @@ function smoothenByRandomDeletionAndHighDegree(packagedSplinePrototypes) {
 
 		splineObject.isGhostSpline = packagedSplinePrototype.isGhostSpline
 		splineObject.isContouringSpline = packagedSplinePrototype.isContouringSpline
+
+		splineObject.colors = newColors
 
 		return splineObject
 	})

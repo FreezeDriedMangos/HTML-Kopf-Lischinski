@@ -52,10 +52,11 @@ voronoiVertexIndex_to_globallyUniqueIndex[9] = (x,y) => voronoiVertexIndex_to_gl
 var __splinePrototypeCounter = 0
 
 class SplinePrototype {
-	constructor(points, isGhostSpline, isContouringSpline) {
+	constructor(points, isGhostSpline, isContouringSpline, colors) {
 		this.points = points
 		this.isGhostSpline = isGhostSpline
 		this.isContouringSpline = isContouringSpline
+		this.colors = colors // one per edge, of form [{left: [r, g, b, a], right: [r, g, b, a]}, ...]
 		this.id = __splinePrototypeCounter++
 	}
 }
@@ -97,6 +98,9 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 
 	var edgesThatArePartOfGhostSplines = {}
 	var edgesThatArePartOfContourSplines = {}
+
+
+	var edgeColors = {}
 
 
 	var adjacencyList = {}
@@ -160,6 +164,13 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 
 						edgesThatArePartOfGhostSplines[globalIndex0 + ' - ' + globalIndex1] = true
 						edgesThatArePartOfGhostSplines[globalIndex1 + ' - ' + globalIndex0] = true
+					}
+
+					// for later, cache the colors related to this edge
+					// note: voronoi verts are always ordered clockwise, so pixel [x][y] will always be to the right of this edge, and [neighborX][neighborY] to the left
+					edgeColors[globalIndex0 + ' - ' + globalIndex1] = {
+						right: getPixelData(x, y),
+						left: getPixelData(neighborX, neighborY)
 					}
 				}
 			}
@@ -281,8 +292,13 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 	const packagedSplinePrototypes = splines.map((splinePoints, splineIndex) => {
 		var isGhostSpline = edgesThatArePartOfGhostSplines[splinePoints[0] + ' - ' + splinePoints[1]]
 		var isContouringSpline = edgesThatArePartOfContourSplines[splinePoints[0] + ' - ' + splinePoints[1]]
+
+		var colors = []
+
 		for(var i = 0; i < splinePoints.length-1; i++) {
 			const edge = splinePoints[i] + ' - ' + splinePoints[i+1]
+
+			colors.push(edgeColors[edge])
 
 			if (edgesThatArePartOfGhostSplines[edge] != isGhostSpline) {
 				console.log({edgesThatArePartOfGhostSplines, splinePoints, splineIndex, i})
@@ -298,7 +314,7 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 				throw Error("Spline is both contour and ghost spline")
 			}
 		}
-		return new SplinePrototype(splinePoints, isGhostSpline, isContouringSpline)
+		return new SplinePrototype(splinePoints, isGhostSpline, isContouringSpline, colors)
 	})
 
 

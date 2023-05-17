@@ -37,55 +37,51 @@ function floodfillNormalImage(colorCanvas, splineObjects, imgWidth, imgHeight, d
 		},
 		(d32) => {
 			const retval = []
-			// seed the image from the pixel centers
-			for(var x = 0; x < imgWidth; x++) {
-				for(var y = 0; y < imgHeight; y++) {
-					// detect if a pixel is outside its bounds somehow
+			
+			splineObjects.forEach(splineObject => {
+				// canvas.lineTo doesn't support full alpha, so I made my own drawing code
+				var path = splineObject.toPath(pixelSize)
+				for (var i = 0; i < path.length-1; i++) {
+					var vector = [path[i+1][0]-path[i][0], path[i+1][1]-path[i][1]] // vector from this point to the next point
+					var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1]) // distance between this point and next point
+					var dirNormalized = [vector[0]/mag, vector[1]/mag]             // direction to next point
+					var magCiel = Math.ceil(mag)
 
-					const canvasY = y*pixelSize + pixelSize/2 
-					const canvasX = x*pixelSize + pixelSize/2
-					const idx = canvasY*w+canvasX
-					if (d32[idx] !== black) continue
-					
-					// check each of this pixels __unconnected__ neighbors. if any of them can be reached without hitting a boundary (ie clear) pixel, skip this seed, it's a leaked pixel (ie the boundary that's supposed to enclose this pixel has moved, and the pixel is no longer enclosed)
-					var skipSeed = false
-					for (var i = 0; i < deltas.length; i++) {
-						if (similarityGraph[x][y][i]) continue
-						try {
-							const diagPart1A = yuvImage[x+deltas[i][0]][y]
-							const diagPart1B = yuvImage[x][y+deltas[i][1]]
-							const diagPart2 = yuvImage[x+deltas[i][0]][y+deltas[i][1]]
 
-							if (i%2 === 0) // this is a diagonal
-								// if xy is connected to this neighbor indirectly, this must be a case where the diagonal was removed between similar colors
-								if (  (!differentColors(yuvImage[x][y], diagPart1A) && !differentColors(diagPart1A, diagPart2)) 
-									||(!differentColors(yuvImage[x][y], diagPart1B) && !differentColors(diagPart1B, diagPart2))) continue; 
-						} catch { continue; } // catch triggers if out of bounds
+					var vertexIndex = Math.trunc((i/path.length)*splineObject.points.length)
+					var colors = splineObject.colors[vertexIndex]
 
-						var loc = [canvasX, canvasY]
+					if (!colors) continue
+
+					var loc = [path[i][0], path[i][1]]
+					for (var j = 0; j <= magCiel+1; j++) {
+						const indxR = Math.ceil(loc[1]+dirNormalized[0])*w+Math.trunc(loc[0]-dirNormalized[1])
+						const indxL = Math.ceil(loc[1]-dirNormalized[0])*w+Math.trunc(loc[0]+dirNormalized[1])
 						
-						var blocked = false
-						for (var j = 0; j <= pixelSize; j++) {
-							loc[0] += deltas[i][0]
-							var indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
-							if (d32[indx] === clear) { blocked = true; break; }
+						if (d32[indxR] !== clear) {
+							var rgbaR = colors.right
+							const abgrR = (rgbaR[3] << 24) | (rgbaR[2] << 16) | (rgbaR[1] << 8) | (rgbaR[0])
+							const abgrUnsignedR = abgrR >>> 0
 
-							loc[1] += deltas[i][1]
-							indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
-							if (d32[indx] === clear) { blocked = true; break; }
+							// d32[indxR] = abgrUnsignedR
+							retval.push([indxR, abgrUnsignedR])
 						}
+						
+						if (d32[indxL] !== clear) {
+							var rgbaL = colors.left
+							const abgrL = (rgbaL[3] << 24) | (rgbaL[2] << 16) | (rgbaL[1] << 8) | (rgbaL[0])
+							const abgrUnsignedL = abgrL >>> 0
 
-						if (!blocked) { skipSeed = true; break; }
+							// d32[indxL] = abgrUnsignedL
+							retval.push([indxL, abgrUnsignedL])
+						}
+						
+						loc[0] += dirNormalized[0]
+						loc[1] += dirNormalized[1]
 					}
-
-					if (skipSeed) continue;
-
-					var rgba = getPixelData(x, y)
-					const abgr = (rgba[3] << 24) | (rgba[2] << 16) | (rgba[1] << 8) | (rgba[0])
-					const abgrUnsigned = abgr >>> 0
-					retval.push([idx, abgrUnsigned === black ? notQuiteBlack : abgrUnsigned])
 				}
-			}
+			})
+			
 			return retval
 		},
 		(d32) => {
