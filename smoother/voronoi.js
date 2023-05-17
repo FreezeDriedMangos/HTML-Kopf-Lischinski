@@ -43,7 +43,6 @@ const connectionPatterns_toVoronoiVerts = {
 
 	"10010110": [2, 5, 9, 13, 14, 15],
 
-	// "11100010": [1, 2, 3, 5, 6, 8, 11, 13, 14, 15], 
 	"11100010": [1, 5, 6, 8, 11, 13, 14, 15], 
 	
 	// "10100011": [], 
@@ -81,7 +80,21 @@ const connectionPatterns_toVoronoiVerts = {
 
 	// 6 connections
 	"10111011": [1, 2, 3, 5, 9, 10, 11, 13],
-	
+
+	// edge cases caused exclusively by 3 or 4 color meetings with weird non associative similarities
+	"00010111": [1, 5, 9, 13],
+	"11010111": [1, 5, 9, 13],
+	"11110101": [1, 5, 9, 13],
+	"11011101": [1, 5, 9, 13],
+	"01110000": [1, 5, 9, 13],
+	"11110001": [1, 5, 9, 13],
+	"00111101": [1, 3, 5, 9, 13],
+	"00111101": [1, 3, 5, 9, 13],
+	"00111100": [1, 3, 5, 9, 13],
+	"01111110": [1, 5, 9, 13, 14],
+	"10001111": [1, 2, 5, 7, 9, 13],
+	"10111101": [1, 2, 3, 5, 9, 13],
+	"11110110": [1, 5, 9, 13, 14, 15],
 }
 const s = 0.25; // s for step
 const voronoiCellVertexPositions = { // [0, 0] is the top left of the pixel
@@ -287,7 +300,7 @@ function heal3ColorMeetings(voronoiVerts, yuvImage, imgWidth, imgHeight) {
 	// finally, remove duplicates
 	for (var x = 0; x < imgWidth; x++) {
 		for (var y = 0; y < imgHeight; y++) {
-			
+
 			// above neighbor
 			if (voronoiVerts[x][y].includes(3) && !voronoiVerts[x][y-1].includes(8))
 				replaceElement(voronoiVerts[x][y], 3, 5) 
