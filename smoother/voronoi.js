@@ -23,7 +23,7 @@ const connectionPatterns_toVoronoiVerts = {
 	"01000101": [1, 5, 9, 13],
 
 	"00001110": [0, 4, 7, 9, 13, 14], 
-	"00011010": [0, 5, 9, 10, 11, 13, 14],
+	"00011010": [0, 5, 9, 10, 11, 13, 14], 
 
 	"01001010": [1, 5, 7, 9, 10, 11, 13, 14],
 	"10100010": [15, 1, 2, 3, 5, 6, 8, 11, 13, 14],
@@ -184,7 +184,7 @@ function computeLocalVoronoiVertsPerPixel(similarityGraph, imgWidth, imgHeight) 
 
 	function voronoiVertsTransform_mirror(verts) {
 		if (!verts) return null
-		return verts.map(v => voronoiVertMirror[v])
+		return verts.map(v => voronoiVertMirror[v]).reverse()
 	}
 
 	var voronoiVerts = [] // voronoiVerts[x][y] => list of [absoluteX, absoluteY] points defining the voronoi cell's shape for this pixel

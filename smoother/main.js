@@ -35,6 +35,8 @@ function rerender() {
 			: initRaster(imgWidth*pixelSize, imgHeight*pixelSize, 'canvasRoot')
 
 		canvases[selected].id = selected + " canvas"
+		
+		if (selected.match(/\(.*\)/g)[0] === "(raster)") canvases[selected].getContext('2d').imageSmoothingEnabled = false
 
 		canvases[selected].onclick = 
 			selected.match(/\(.*\)/g)[0] === "(svg)" 
@@ -169,6 +171,7 @@ function rerender_withoutOverlays(canvas) {
 			const splineObject = new ClampedClosedBSpline(4, absolutePoints)
 			splineObject.isContouringSpline = packagedSplinePrototype.isContouringSpline
 			splineObject.isGhostSpline = packagedSplinePrototype.isGhostSpline
+			splineObject.colors = packagedSplinePrototype.colors
 			return splineObject
 		})
 

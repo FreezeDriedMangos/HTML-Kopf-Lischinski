@@ -2,11 +2,15 @@
 const black = 0xFF000000; // the background color that gets treated as "not yet filled" by the floodfill algorithm
 const notQuiteBlack = 0xFF010101; // a hacky solve for when the image actually contains black pixels 
 const clear = 0x00000000;
+const white = 0xFFFFFFFF;
 const red = 0xFF0000FF;
 const green = 0xFF00FF00;
 const blue = 0xFFFF0000;
 const yellow = red | green;
 const magenta = red | blue;
+
+
+const borderColor = white
 
 function floodfillNormalImage(colorCanvas, splineObjects, imgWidth, imgHeight, deltas, similarityGraph, getPixelData, yuvImage, blurBoundries=true) {
 	const w = imgWidth*pixelSize;
@@ -27,7 +31,7 @@ function floodfillNormalImage(colorCanvas, splineObjects, imgWidth, imgHeight, d
 					var loc = [path[i][0], path[i][1]]
 					for (var j = 0; j <= magCiel+1; j++) {
 						const indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
-						d32[indx] = clear
+						d32[indx] = borderColor
 						boundaries.push(indx)
 						loc[0] += dirNormalized[0]
 						loc[1] += dirNormalized[1]
@@ -58,7 +62,7 @@ function floodfillNormalImage(colorCanvas, splineObjects, imgWidth, imgHeight, d
 						const indxR = Math.ceil(loc[1]+dirNormalized[0])*w+Math.trunc(loc[0]-dirNormalized[1])
 						const indxL = Math.ceil(loc[1]-dirNormalized[0])*w+Math.trunc(loc[0]+dirNormalized[1])
 						
-						if (d32[indxR] !== clear) {
+						if (d32[indxR] !== borderColor) {
 							var rgbaR = colors.right
 							const abgrR = (rgbaR[3] << 24) | (rgbaR[2] << 16) | (rgbaR[1] << 8) | (rgbaR[0])
 							const abgrUnsignedR = abgrR >>> 0
@@ -67,7 +71,7 @@ function floodfillNormalImage(colorCanvas, splineObjects, imgWidth, imgHeight, d
 							retval.push([indxR, abgrUnsignedR])
 						}
 						
-						if (d32[indxL] !== clear) {
+						if (d32[indxL] !== borderColor) {
 							var rgbaL = colors.left
 							const abgrL = (rgbaL[3] << 24) | (rgbaL[2] << 16) | (rgbaL[1] << 8) | (rgbaL[0])
 							const abgrUnsignedL = abgrL >>> 0
@@ -230,8 +234,6 @@ function floodfillEdgeDistanceFieldImage(colorCanvas, splineObjects, imgWidth) {
 					var dirNormalized = [vector[0]/mag, vector[1]/mag]
 					var magCiel = Math.ceil(mag)
 
-					const borderColor = 0xffffffff
-
 					var loc = [path[i][0], path[i][1]]
 					for (var j = 0; j <= magCiel; j++) {
 						const indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
@@ -281,8 +283,6 @@ function floodfillGhostEdgeDistanceFieldImage(colorCanvas, splineObjects, imgWid
 					var mag = Math.sqrt(vector[0]*vector[0] + vector[1]*vector[1])
 					var dirNormalized = [vector[0]/mag, vector[1]/mag]
 					var magCiel = Math.ceil(mag)
-
-					const borderColor = 0xffffffff
 
 					var loc = [path[i][0], path[i][1]]
 					for (var j = 0; j <= magCiel; j++) {
@@ -344,7 +344,7 @@ const floodfill = function (colorCanvas, preseedCallback, seedFunction, cleanupC
 
 	const queue = [];  // keep queue content as simple as possible.
 	for (const pixel of start) { 
-		queue.push(pixel[0]);     // Populate the queue
+		queue.push(pixel[0]);     // Populate the queue 
 		d32[pixel[0]] = pixel[1]; // Write pixel directly to buffer
 	}
 	
