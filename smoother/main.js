@@ -255,6 +255,8 @@ var pixelToEdge = {}
 var edgeToState = {}
 
 function compileSplineObjectPixels() {
+	if (!computation_splines || !computation_splines.packagedSplinePrototypes) return
+
 	computation_splines.packagedSplinePrototypes.forEach(packagedSplinePrototype => {
 		const splinePointIndexes = packagedSplinePrototype.points
 		var color = packagedSplinePrototype.isContouringSpline
@@ -524,28 +526,34 @@ function similaritySwatchClicked(palletteColor1, palletteColor2, swatchElement) 
 // main
 //
 
-function recompute() {
-	Object.values(canvases).forEach(canvas => canvas.remove())
-	canvases = {} // canvases need to be rebuilt with the new size
-
-	compute()
-	compileSplineObjectPixels() // bonus computation used for ui only
-	rerender()
-}
-
-function main() {
+function resetUIControls() {
 	selected = 'raw (svg)'
 	document.getElementById('raw (svg)').checked = true
 	document.getElementById('drawSimilarityGraph').checked = showSimilarityGraph
 	document.getElementById('blurBoundries').checked = blurBoundries
 	document.getElementById('upscaleFactor').value = pixelSize
+}
 
+function recompute() {
+	try {
+		Object.values(canvases).forEach(canvas => canvas.remove())
+		canvases = {} // canvases need to be rebuilt with the new size
+		
+		compute()
+		compileSplineObjectPixels() // bonus computation used for ui only
+		rerender()
+	} catch (e) {
+		window.alert("Something went wrong.")
+		console.error(e)
+	}
+}
+
+function main() {
+	resetUIControls()
 	palletteOverrides = {} // clear overrides, we'll be getting a new pallette anyway
 
-	compute()
-	compileSplineObjectPixels() // bonus computation used for ui only
-    rerender()
-
+	recompute()
+	
 	pallette = getPallette() // not needed for the algortihm, so this is handled outside of compute() and rerender()
 	drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked)
 	
