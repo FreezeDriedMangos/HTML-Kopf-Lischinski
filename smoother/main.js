@@ -197,6 +197,7 @@ function rerender_withoutOverlays(canvas) {
 	}
 
 	if (selected === 'floodfill blurred (raster)') {
+		console.time('blur time')
 		console.log('computing blur distances')
 
 		// selected = 'blur distance field (raster)'
@@ -240,6 +241,7 @@ function rerender_withoutOverlays(canvas) {
 		gauss(canvas, pixelSize, boundaries, canvases['blur distance field (raster)']?.getContext('2d').getImageData(0, 0, canvas.width,canvas.height).data)
 
 		console.log('complete')
+		console.timeEnd('blur time')
 		return
 	}
 }
