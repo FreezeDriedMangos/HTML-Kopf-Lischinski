@@ -222,6 +222,7 @@ function rerender_withoutOverlays(canvas) {
 		if (splineObjects.filter(spline => spline.isGhostSpline).length <= 0) return
 
 		const boundaries = []
+		const boundaryFlags = new Uint8Array(canvas.width * canvas.height);
 		const w = imgWidth*pixelSize;
 		splineObjects.forEach(splineObject => {
 			if (splineObject.isGhostSpline) return // ghost splines are not boundaries
@@ -243,6 +244,7 @@ function rerender_withoutOverlays(canvas) {
 				for (var j = 0; j <= magCiel+1; j++) {
 					const indx = Math.trunc(loc[1])*w+Math.trunc(loc[0])
 					boundaries.push(indx)
+					boundaryFlags[indx] = 1
 					loc[0] += dirNormalized[0]
 					loc[1] += dirNormalized[1]
 				}
@@ -251,8 +253,12 @@ function rerender_withoutOverlays(canvas) {
 
 		console.log('beginning blur')
 
-		// for (var i = 0; i < 3; i++) gauss(canvas, 1, boundaries)
-		gauss(canvas, pixelSize, boundaries, canvases['blur distance field (raster)']?.getContext('2d').getImageData(0, 0, canvas.width,canvas.height).data)
+		// Use a small fixed blur radius (e.g., 2) to keep it fast
+		const BLUR_RADIUS = 2; // can be adjusted by user later
+		const BLUR_MAX_DISTANCE = 5;
+		const blendDistanceData = canvases['blur distance field (raster)']?.getContext('2d').getImageData(0, 0, canvas.width,canvas.height).data
+		gauss(canvas, BLUR_RADIUS, boundaries, );
+		gauss(canvas, BLUR_RADIUS, boundaryFlags, blendDistanceData, BLUR_MAX_DISTANCE);
 
 		console.log('complete')
 		console.timeEnd('blur time')
