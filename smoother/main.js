@@ -565,13 +565,13 @@ function similaritySwatchClicked(palletteColor1, palletteColor2, swatchElement) 
 	
 	swatchElement.style.border = '1px solid green'
 
-	drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, similarityKeySwatchClicked, palletteFullView)
+	drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, similarityKeySwatchClicked, wholePalletteSwatchClicked, palletteFullView)
 }
 
-const keyOverrideStates = {}
+var palletteKeyOverrideStates = {}
 function similarityKeySwatchClicked(palletteColor) {
 	const colorString = palletteColor.toString()
-	keyOverrideStates[colorString] = ((keyOverrideStates[colorString] ?? 0) + 1) % 4
+	palletteKeyOverrideStates[colorString] = ((palletteKeyOverrideStates[colorString] ?? 0) + 1) % 4
 
 	pallette.forEach(color => {
 		const otherColorString = (RGBtoYUV(...color)).toString()
@@ -579,22 +579,45 @@ function similarityKeySwatchClicked(palletteColor) {
 		palletteOverrides[colorString] = palletteOverrides[colorString] ?? {}
 		palletteOverrides[otherColorString] = palletteOverrides[otherColorString] ?? {}
 
-		palletteOverrides[colorString][otherColorString] = keyOverrideStates[colorString]
-		palletteOverrides[otherColorString][colorString] = keyOverrideStates[colorString]
+		palletteOverrides[colorString][otherColorString] = palletteKeyOverrideStates[colorString]
+		palletteOverrides[otherColorString][colorString] = palletteKeyOverrideStates[colorString]
 	})
 
-	drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, similarityKeySwatchClicked, palletteFullView)
+	drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, similarityKeySwatchClicked, wholePalletteSwatchClicked, palletteFullView)
+}
+
+var wholePalletteOverrideState = 0
+function wholePalletteSwatchClicked() {
+	wholePalletteOverrideState = (wholePalletteOverrideState + 1) % 4
+	console.log("setting whole pallette to " + wholePalletteOverrideState)
+	
+	pallette.forEach(color => {
+		pallette.forEach(otherColor => {
+			if (color === otherColor) return;
+
+			const colorString = (RGBtoYUV(...color)).toString()
+			const otherColorString = (RGBtoYUV(...otherColor)).toString()
+
+			palletteOverrides[colorString] = palletteOverrides[colorString] ?? {}
+			palletteOverrides[otherColorString] = palletteOverrides[otherColorString] ?? {}
+
+			palletteOverrides[colorString][otherColorString] = wholePalletteOverrideState
+			palletteOverrides[otherColorString][colorString] = wholePalletteOverrideState
+		})
+	})
+
+	drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, similarityKeySwatchClicked, wholePalletteSwatchClicked, palletteFullView)
 }
 
 function togglePalletteView() {
     palletteFullView = !palletteFullView;
-    drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, similarityKeySwatchClicked, palletteFullView);
+    drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, similarityKeySwatchClicked, wholePalletteSwatchClicked, palletteFullView);
 }
 
 function resetSimilarityGrid() {
 	if (confirm("Are you sure you want to clear any pallette overrides you've set? (This is irreversable.)")) {
 		palletteOverrides = {}
-		drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, similarityKeySwatchClicked, palletteFullView);
+		drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, similarityKeySwatchClicked, wholePalletteSwatchClicked, palletteFullView);
 	}
 }
 
@@ -637,7 +660,7 @@ function main() {
 	recompute()
 	
 	pallette = getPallette() // not needed for the algortihm, so this is handled outside of compute() and rerender()
-	drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, similarityKeySwatchClicked, palletteFullView)
+	drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, similarityKeySwatchClicked, wholePalletteSwatchClicked, palletteFullView)
 	
 	hasLoaded = true
 }

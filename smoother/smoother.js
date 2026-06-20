@@ -333,7 +333,7 @@ function drawPallette(pallette, parentElementId = undefined, palletteSwatchSize 
 	})
 }
 
-function drawSimilarityGrid(pallette, parentElementId = undefined, palletteSwatchSize = 10, clickCallback = ()=>{}, similarityKeySwatchClicked = ()=>{}, fullView = true) {
+function drawSimilarityGrid(pallette, parentElementId = undefined, palletteSwatchSize = 10, clickCallback = ()=>{}, similarityKeySwatchClicked = ()=>{},  wholePalletteSwatchClicked = ()=>{}, fullView = true) {
 	const palletteParent = parentElementId ? document.getElementById(parentElementId) : document.createElement('div')
 	if (!parentElementId) document.body.appendChild(palletteParent)
 
@@ -360,6 +360,7 @@ function drawSimilarityGrid(pallette, parentElementId = undefined, palletteSwatc
 
 	// fill the empty corner of the comparison grid
 	const emptyCorner = createSwatch('#00000000', 1, 1)
+	emptyCorner.onclick = wholePalletteSwatchClicked
 	emptyCorner.style.border = '1px solid white'
 	palletteParent.appendChild(emptyCorner)
 
