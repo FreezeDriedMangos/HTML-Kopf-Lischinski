@@ -221,27 +221,28 @@ function makeGradient(svg, name, controlPoints) {
 //
 
 // https://stackoverflow.com/a/42498790/9643841
-var openFile = function(file) {
-    var input = file.target;
+var openFile = function(event) {
+    var file = event.target.files[0];
+    if (!file) return;
 
     var reader = new FileReader();
-    reader.onload = function(){
-		var dataURL = reader.result;
-		var output = document.getElementById(inputImageElementID);
-		output.src = dataURL;
-		
-		var image = document.createElement("img");
-		image.src = dataURL;
-		console.log(image.width) // logging the size seems to initialize it
-		console.log(image.height)
-
-		if (image.width === 0 || image.height === 0) {
-			alert('Image failed to load. Please refresh the page and try again.')
-		}
-		
-		init()
+    reader.onload = function(e) {
+        var dataURL = e.target.result;
+        var img = document.getElementById(inputImageElementID);
+        // Clear previous image state
+        img.onload = null;
+        img.onerror = null;
+        // Set new image
+        img.onload = function() {
+            // Image fully loaded – now initialize
+            init();
+        };
+        img.onerror = function() {
+            alert('Image failed to load. Please try again.');
+        };
+        img.src = dataURL;
     };
-    reader.readAsDataURL(input.files[0]);
+    reader.readAsDataURL(file);
 };
 
 //
