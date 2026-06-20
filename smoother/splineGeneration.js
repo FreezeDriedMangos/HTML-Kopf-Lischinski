@@ -278,28 +278,49 @@ function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, 
 
 
 	// package splines into objects to store the points and metadata (spline type: contouring, normal, ghost) together
-	const packagedSplinePrototypes = splines.map((splinePoints, splineIndex) => {
-		var isGhostSpline = edgesThatArePartOfGhostSplines[splinePoints[0] + ' - ' + splinePoints[1]]
-		var isContouringSpline = edgesThatArePartOfContourSplines[splinePoints[0] + ' - ' + splinePoints[1]]
-		for(var i = 0; i < splinePoints.length-1; i++) {
-			const edge = splinePoints[i] + ' - ' + splinePoints[i+1]
+	// package splines into objects, splitting at flag changes
+	const packagedSplinePrototypes = [];
 
-			if (edgesThatArePartOfGhostSplines[edge] != isGhostSpline) {
-				console.log({edgesThatArePartOfGhostSplines, splinePoints, splineIndex, i})
-				throw Error("Spline is partly ghost spline, partly not")
-			}
-			if (edgesThatArePartOfContourSplines[edge] != isContouringSpline) {
-				console.log({edgesThatArePartOfContourSplines, splinePoints, splineIndex, i})
-				throw Error("Spline is partly contour spline, partly not")
-			}
+	splines.forEach((splinePoints) => {
+		if (splinePoints.length < 2) return;
 
-			if (isGhostSpline && isContouringSpline) {
-				console.log({edgesThatArePartOfContourSplines, edgesThatArePartOfGhostSplines, splinePoints, splineIndex, i})
-				throw Error("Spline is both contour and ghost spline")
+		// Build flags for each edge
+		const edgeFlags = [];
+		for (let i = 0; i < splinePoints.length - 1; i++) {
+			const edge = splinePoints[i] + ' - ' + splinePoints[i+1];
+			const isGhost = !!edgesThatArePartOfGhostSplines[edge];
+			const isContour = !!edgesThatArePartOfContourSplines[edge];
+			// Sanity check: cannot be both
+			if (isGhost && isContour) {
+				console.warn("Edge is both ghost and contour. Defaulting to contour.");
+				edgeFlags.push({ isGhost: false, isContour: true });
+			} else {
+				edgeFlags.push({ isGhost, isContour });
 			}
 		}
-		return new SplinePrototype(splinePoints, isGhostSpline, isContouringSpline)
-	})
+
+		// Split into runs with identical flags
+		let start = 0;
+		while (start < edgeFlags.length) {
+			let end = start;
+			while (end < edgeFlags.length &&
+				edgeFlags[end].isGhost === edgeFlags[start].isGhost &&
+				edgeFlags[end].isContour === edgeFlags[start].isContour) {
+				end++;
+			}
+			// Build points for this run: from start to end (inclusive)
+			const runPoints = splinePoints.slice(start, end + 1);
+			// Only create if it has at least 2 points
+			if (runPoints.length >= 2) {
+				packagedSplinePrototypes.push(new SplinePrototype(
+					runPoints,
+					edgeFlags[start].isGhost,
+					edgeFlags[start].isContour
+				));
+			}
+			start = end;
+		}
+	});
 
 
 
