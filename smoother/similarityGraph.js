@@ -1,6 +1,6 @@
 var forcedSimilarities = {}
 
-function computeSimilarityGraph(imgWidth, imgHeight, getPixelData) {
+function computeSimilarityGraph(imgWidth, imgHeight, getPixelData, forcedSimilarities) {
 	// compute the yuv colorspace values of each pixel
 	var yuvImage = []
 	for (var x = 0; x < imgWidth; x++) {

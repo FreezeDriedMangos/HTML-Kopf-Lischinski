@@ -24,28 +24,8 @@
 			<br>
 
 			<br/>
+			Upscale Factor:
 			<input type="number" id="upscaleFactor" name="upscaleFactor" min="1" max="50" value="10" onchange="upscaleFactorChanged(event)">
-			<br/>
-			<br/>
-
-			TODO: add a checkbox to make ghost splines follow voronoi borders (or just do it by default) <br/>
-			<br/>
-			TODO: make all the global variables that control the computation (eg markedEdges, forcedSimilarities) into parameters of the computation functions (store the user input globally in main.js)
-			<br/>
-			<br/>
-
-			TODO: finish adding manual similarity graph editing
-
-			<br/>
-			<br/>
-			
-			TODO: add a "blur across regular splines" checkbox option
-
-			<br/>
-			<br/>
-
-			TODO: make the pallette similarity chart better for cases of large pallettes, maybe provide an alternate one where you can drag color swatches (labelled with their hex value) into bubbles with eachother to make venn diagrams of similarity
-			
 			<br/>
 			<br/>
 
@@ -87,9 +67,18 @@
 			<input type="checkbox" id="drawSimilarityGraph" onchange="renderSimilarityGraphToggled(event)"/>
 			<label for="drawSimilarityGraph">Similarity Graph (svg options only)</label><br>
 
+			<!-- Blur boundaries (antialiasing step) -->
 			<input type="checkbox" id="blurBoundries" checked onchange="blurBoundriesToggled(event)"/>
 			<label for="blurBoundries">Blur Boundries (floodfill options only)</label><br>
 			
+			<!-- Ghost splines unsmoothed -->
+			<input type="checkbox" id="ghostSplinesUnsmoothed" onchange="ghostSplinesUnsmoothedToggled(event)"/>
+			<label for="ghostSplinesUnsmoothed">Ghost splines follow voronoi borders (unsmoothed)</label><br>
+
+			<!-- Blur across regular splines -->
+			<input type="checkbox" id="blurAcrossRegularSplines" onchange="blurAcrossRegularSplinesToggled(event)"/>
+			<label for="blurAcrossRegularSplines">Blur across regular splines</label><br>
+
 			<br/>
 
 			<button onclick="rerender()">
@@ -104,11 +93,10 @@
 			
 			<br/>
 
-			
-			TODO: add a way to click the similarity graph to manually change it - eg on diagonals, cycle between / type, \ type and none, and on verticals and horizontals cycle between on and off
-			<br/>
 
-			<div id="palletteContainer" style="border: darkgray solid; background-color: white; margin: 10px; min-height: 40px;">
+			<button onclick="togglePalletteView()">Toggle Pallette View (full/upper triangle)</button>
+
+			<div id="palletteContainer" style="border: darkgray solid; background-color: white; margin: 10px; min-height: 40px; max-height: 300px; overflow-y: auto;">
 				Pallette Similarity Chart <br/>
 				<div id="pallette" style="display: flex;">
 				</div>

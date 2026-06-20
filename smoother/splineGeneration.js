@@ -88,7 +88,7 @@ const globallyUniqueIndex_to_absoluteXY = (index) => {
 	return point
 }
 
-function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, imgWidth, imgHeight, getPixelData, buildGhostSplines=false) {
+function computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, imgWidth, imgHeight, getPixelData, buildGhostSplines=false, markedEdges) {
 	// iterate over each pixel and check each of its neighbors for dissimilar pixels
 	// when a pair of dissimilar pixels is found, record any edges that they share. these edges will eventually be stitched together into the splines
 

@@ -333,7 +333,7 @@ function drawPallette(pallette, parentElementId = undefined, palletteSwatchSize 
 	})
 }
 
-function drawSimilarityGrid(pallette, parentElementId = undefined, palletteSwatchSize = 10, clickCallback = ()=>{}) {
+function drawSimilarityGrid(pallette, parentElementId = undefined, palletteSwatchSize = 10, clickCallback = ()=>{}, fullView = true) {
 	const palletteParent = parentElementId ? document.getElementById(parentElementId) : document.createElement('div')
 	if (!parentElementId) document.body.appendChild(palletteParent)
 
@@ -375,7 +375,7 @@ function drawSimilarityGrid(pallette, parentElementId = undefined, palletteSwatc
 		// similarity chart
 		pallette.forEach((otherColor, c) => {
 			// only generate half of the chart, skip the duplicates
-			if ( c < r ) {
+			if (!fullView && c < r ) {
 				const placeholderSwatch = createSwatch('#ffffff', r+2, c+2)
 				placeholderSwatch.style.border = '1px solid white'
 				palletteParent.appendChild(placeholderSwatch)
@@ -385,7 +385,10 @@ function drawSimilarityGrid(pallette, parentElementId = undefined, palletteSwatc
 
 			const yuvOtherColor = RGBtoYUV(...otherColor)
 
-			const dissimilarity = dissimilarityScore(yuvColor, yuvOtherColor)
+
+
+			const overridenDissimilarity = palletteOverrides?.[yuvColor.toString()]?.[yuvOtherColor.toString()]
+			const dissimilarity = overridenDissimilarity ?? dissimilarityScore(yuvColor, yuvOtherColor)
 			var similarity = '#ff00ff'
 			switch (dissimilarity) {
 				case 0: similarity = '#ffffff'; break
@@ -395,7 +398,7 @@ function drawSimilarityGrid(pallette, parentElementId = undefined, palletteSwatc
 			}
 
 			const similaritySwatch = createSwatch(similarity, r+2, c+2)
-			similaritySwatch.style.border = '1px solid white'
+			similaritySwatch.style.border = overridenDissimilarity == undefined ? '1px solid white' : '1px solid green'
 			similaritySwatch.onclick = () => clickCallback(yuvColor, yuvOtherColor, similaritySwatch)
 			palletteParent.appendChild(similaritySwatch)
 		})

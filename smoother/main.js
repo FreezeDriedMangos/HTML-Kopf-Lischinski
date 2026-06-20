@@ -6,6 +6,7 @@ var hasLoaded = false
 var selected = 'raw (svg)'
 var showSimilarityGraph = false
 var blurBoundries = true
+var palletteFullView = false // true = full matrix, false = upper triangle
 
 // cached graphics data
 var canvases = {}
@@ -21,6 +22,13 @@ var computation_smothenedSplines = {}
 var HEAL_3_COLOR_MEETINGS = true
 // var pixelSize // exists in smoother.js
 
+// user overrides for computation
+var userOverrides = {
+    forcedSimilarities: {},  // from similarity graph editing
+    markedEdges: {},         // from spline editing
+    ghostSplinesUnsmoothed: false,
+    blurAcrossRegularSplines: false
+};
 
 //
 // Compute and render
@@ -58,7 +66,7 @@ function compute(stoppingPoint) {
 	// make similarity graph
 	//
 
-	computation_similarityGraph = computeSimilarityGraph(imgWidth, imgHeight, getPixelData);
+	computation_similarityGraph = computeSimilarityGraph(imgWidth, imgHeight, getPixelData, userOverrides.forcedSimilarities);
 	const {similarityGraph, yuvImage} = computation_similarityGraph
 	
 	if (stoppingPoint === 'similarity graph (svg)') return
@@ -80,7 +88,7 @@ function compute(stoppingPoint) {
 
 	// draw splines between all dissimilar colors, along the voronoi edges they share
 	
-    computation_splines = computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, imgWidth, imgHeight, getPixelData, true)
+    computation_splines = computeSplinesByGlobalIndices(similarityGraph, voronoiVerts, yuvImage, imgWidth, imgHeight, getPixelData, true, userOverrides.markedEdges)
 
 	if (stoppingPoint === 'splines (svg)') return
 	if (stoppingPoint === 'splines (raster)') return
@@ -89,7 +97,7 @@ function compute(stoppingPoint) {
 	// smoothen splines
 	//
 
-	computation_smothenedSplines = smoothenSplines(computation_splines.packagedSplinePrototypes)
+	computation_smothenedSplines = smoothenSplines(computation_splines.packagedSplinePrototypes, userOverrides.ghostSplinesUnsmoothed)
 
 	// draw smoothened splines
 	if (stoppingPoint === 'smooth splines (raster)') return
@@ -217,6 +225,12 @@ function rerender_withoutOverlays(canvas) {
 		const w = imgWidth*pixelSize;
 		splineObjects.forEach(splineObject => {
 			if (splineObject.isGhostSpline) return // ghost splines are not boundaries
+
+			if (!userOverrides.blurAcrossRegularSplines && !splineObject.isContouringSpline) {
+				// if we are not blurring across regular splines, treat them as boundaries
+				// else, only contouring splines are boundaries
+				return
+			}
 
 			var path = splineObject.toPath(pixelSize)
 			for (var i = 0; i < path.length-1; i++) {
@@ -411,7 +425,7 @@ function handleClick(x, y) {
 			}
 		}
 
-	} else if (selected.endsWith('(svg)') && drawSimilarityGrid) {
+	} else if (selected.endsWith('(svg)') && showSimilarityGraph) {
 		xfloat /= pixelSize
 		yfloat /= pixelSize
 		x /= pixelSize
@@ -439,25 +453,42 @@ function handleClick(x, y) {
 		
 		if (pixelMidXClicked && pixelMidYClicked) return // user clicked the very center of the pixel, no connection to deal with
 		if (pixelMidXClicked) {
-			console.log('vertical')
-			// we're dealing with (x, y) and (x, y+1)'s connection only
-			forcedSimilarities[`${x},${y}-${deltaDown_index}`] = !computation_similarityGraph.similarityGraph[x][y][deltaDown_index]
-			forcedSimilarities[`${x},${y+1}-${deltaUp_index}`] = !computation_similarityGraph.similarityGraph[x][y+1][deltaUp_index]
+			// vertical edge: between (x,y) and (x,y+1)
+			const key1 = `${x},${y}-${deltaDown_index}`;
+			const key2 = `${x},${y+1}-${deltaUp_index}`;
+			const current = computation_similarityGraph.similarityGraph[x][y][deltaDown_index];
+			userOverrides.forcedSimilarities[key1] = !current;
+			userOverrides.forcedSimilarities[key2] = !current;
+			// also update the graph temporarily for visual feedback (optional)
 		} else if (pixelMidYClicked) {
-			console.log('horizontal')
-			// we're dealing with (x, y) and (x+1, y)'s connection only
-			forcedSimilarities[`${x},${y}-${deltaRight_index}`] = !computation_similarityGraph.similarityGraph[x][y][deltaRight_index]
-			forcedSimilarities[`${x+1},${y}-${deltaLeft_index}`] = !computation_similarityGraph.similarityGraph[x+1][y][deltaLeft_index]
+			// horizontal edge: between (x,y) and (x+1,y)
+			const key1 = `${x},${y}-${deltaRight_index}`;
+			const key2 = `${x+1},${y}-${deltaLeft_index}`;
+			const current = computation_similarityGraph.similarityGraph[x][y][deltaRight_index];
+			userOverrides.forcedSimilarities[key1] = !current;
+			userOverrides.forcedSimilarities[key2] = !current;
  		} else {
-			console.log('TODO')
-
-			// dealing with the crossing formed from the diagonal connections between 
-			// [
-			// 	[x, y],
-			// 	[x+1, y],
-			// 	[x, y+1],
-			// 	[x+1, y+1],
-			// ]
+			// diagonal: determine which diagonal (main or anti)
+			// We'll consider the click position relative to the pixel center
+			const dx = (xfloat % 1) - 0.5;
+			const dy = (yfloat % 1) - 0.5;
+			// The diagonals connect (x,y)-(x+1,y+1) and (x+1,y)-(x,y+1)
+			// If dx and dy have the same sign, it's the main diagonal; else anti-diagonal.
+			if ((dx > 0 && dy > 0) || (dx < 0 && dy < 0)) {
+				// main diagonal
+				const key1 = `${x},${y}-${deltaDownRight_index}`;
+				const key2 = `${x+1},${y+1}-${deltaUpLeft_index}`;
+				const current = computation_similarityGraph.similarityGraph[x][y][deltaDownRight_index];
+				userOverrides.forcedSimilarities[key1] = !current;
+				userOverrides.forcedSimilarities[key2] = !current;
+			} else {
+				// anti-diagonal
+				const key1 = `${x+1},${y}-${deltaDownLeft_index}`;
+				const key2 = `${x},${y+1}-${deltaUpRight_index}`;
+				const current = computation_similarityGraph.similarityGraph[x+1][y][deltaDownLeft_index];
+				userOverrides.forcedSimilarities[key1] = !current;
+				userOverrides.forcedSimilarities[key2] = !current;
+			}
 		}
 
 	}
@@ -491,6 +522,14 @@ function blurBoundriesToggled(event) {
 	if (selected.match(/\(.*\)/g)[0] === "(raster)") rerender()
 }
 
+function ghostSplinesUnsmoothedToggled(event) {
+    userOverrides.ghostSplinesUnsmoothed = event.target.checked;
+}
+
+function blurAcrossRegularSplinesToggled(event) {
+    userOverrides.blurAcrossRegularSplines = event.target.checked;
+}
+
 function upscaleFactorChanged(event) {
 	try {
 		pixelSize = Math.floor(Number.parseFloat(event.target.value))
@@ -519,8 +558,14 @@ function similaritySwatchClicked(palletteColor1, palletteColor2, swatchElement) 
 	}
 	
 	swatchElement.style.border = '1px solid green'
+
+	drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, palletteFullView)
 }
 
+function togglePalletteView() {
+    palletteFullView = !palletteFullView;
+    drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, palletteFullView);
+}
 
 //
 // main
@@ -561,7 +606,7 @@ function main() {
 	recompute()
 	
 	pallette = getPallette() // not needed for the algortihm, so this is handled outside of compute() and rerender()
-	drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked)
+	drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, palletteFullView)
 	
 	hasLoaded = true
 }

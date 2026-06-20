@@ -1,36 +1,49 @@
 
-function smoothenSplines(packagedSplinePrototypes) {
-	return smoothenByRandomDeletionAndHighDegree(packagedSplinePrototypes)
+function smoothenSplines(packagedSplinePrototypes, ghostSplinesUnsmoothed) {
+	return smoothenByRandomDeletionAndHighDegree(packagedSplinePrototypes, ghostSplinesUnsmoothed)
 }
 
-function smoothenByRandomDeletionAndHighDegree(packagedSplinePrototypes) {
+function smoothenByRandomDeletionAndHighDegree(packagedSplinePrototypes, ghostSplinesUnsmoothed) {
 	const splineObjects = packagedSplinePrototypes.map((packagedSplinePrototype, splineIndex) => {
 		const splinePointIndexes = packagedSplinePrototype.points
+		const isGhost = packagedSplinePrototype.isGhostSpline;
 
-		var newIndexes = [...splinePointIndexes]
-		for (var i = 1; i < newIndexes.length-1; i++) {
-			if (newIndexes.length < 8) break;
-			if (Math.random() > 0.6) newIndexes.splice(i, 1)
+        if (isGhost && ghostSplinesUnsmoothed) {
+            // Use original points without smoothing, and use linear interpolation (degree 1)
+            // We'll create a BSpline with degree 1 (linear) and keep all points
+            const absolutePoints = splinePointIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i));
+            const absolutePoints_scaled = absolutePoints.map(p => [p[0], p[1]]);
+            // Create a BSpline with degree 1 (linear) – we'll assume ClampedClosedBSpline supports degree
+            const splineObject = new ClampedClosedBSpline(1, absolutePoints_scaled);
+            splineObject.isGhostSpline = true;
+            splineObject.isContouringSpline = packagedSplinePrototype.isContouringSpline;
+            return splineObject;
+        } else {
+			var newIndexes = [...splinePointIndexes]
+			for (var i = 1; i < newIndexes.length-1; i++) {
+				if (newIndexes.length < 8) break;
+				if (Math.random() > 0.6) newIndexes.splice(i, 1)
+			}
+			
+			var absolutePoints = newIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i))
+			var absolutePoints_scaled = absolutePoints.map(point => [point[0], point[1]])
+			
+			if (newIndexes.length <= 5 && newIndexes[0] === newIndexes[newIndexes.length-1]) {
+				// this is a tiny closed loop and so we want to expand it 
+				const center = absolutePoints_scaled.reduce(([avgX, avgY], [x, y]) => [avgX + x/newIndexes.length, avgY + y/newIndexes.length], [0,0])
+				absolutePoints_scaled.forEach(point => {
+					point[0] += 0.2*(point[0]-center[0])
+					point[1] += 0.2*(point[1]-center[1])
+				})
+			}
+
+			const splineObject = new ClampedClosedBSpline(8, absolutePoints_scaled);
+
+			splineObject.isGhostSpline = packagedSplinePrototype.isGhostSpline
+			splineObject.isContouringSpline = packagedSplinePrototype.isContouringSpline
+
+			return splineObject
 		}
-		
-		var absolutePoints = newIndexes.map(i => globallyUniqueIndex_to_absoluteXY(i))
-		var absolutePoints_scaled = absolutePoints.map(point => [point[0], point[1]])
-		
-		if (newIndexes.length <= 5 && newIndexes[0] === newIndexes[newIndexes.length-1]) {
-			// this is a tiny closed loop and so we want to expand it 
-			const center = absolutePoints_scaled.reduce(([avgX, avgY], [x, y]) => [avgX + x/newIndexes.length, avgY + y/newIndexes.length], [0,0])
-			absolutePoints_scaled.forEach(point => {
-				point[0] += 0.2*(point[0]-center[0])
-				point[1] += 0.2*(point[1]-center[1])
-			})
-		}
-
-		const splineObject = new ClampedClosedBSpline(8, absolutePoints_scaled);
-
-		splineObject.isGhostSpline = packagedSplinePrototype.isGhostSpline
-		splineObject.isContouringSpline = packagedSplinePrototype.isContouringSpline
-
-		return splineObject
 	})
 
 	return {splineObjects}
