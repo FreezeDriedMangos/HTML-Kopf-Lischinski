@@ -306,7 +306,8 @@ function getPallette() {
 	}
 
 	const retval = Object.values(pallette)
-	retval.sort((c1, c2) => rgb2hsv(...c1)[0] - rgb2hsv(...c2)[0]) // sort by hue
+	// retval.sort((c1, c2) => rgb2hsv(...c1)[0] - rgb2hsv(...c2)[0]) // sort by hue
+	retval.sort((c1, c2) => RGBtoYUV(...c1)[0] - RGBtoYUV(...c2)[0]) // sort by Y
 	return retval
 }
 
