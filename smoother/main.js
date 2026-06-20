@@ -565,12 +565,32 @@ function similaritySwatchClicked(palletteColor1, palletteColor2, swatchElement) 
 	
 	swatchElement.style.border = '1px solid green'
 
-	drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, palletteFullView)
+	drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, similarityKeySwatchClicked, palletteFullView)
+}
+
+const keyOverrideStates = {}
+function similarityKeySwatchClicked(palletteColor) {
+	const colorString = palletteColor.toString()
+	keyOverrideStates[colorString] = ((keyOverrideStates[colorString] ?? 0) + 1) % 4
+
+	pallette.forEach(color => {
+		const otherColorString = (RGBtoYUV(...color)).toString()
+
+		palletteOverrides[colorString] = palletteOverrides[colorString] ?? {}
+		palletteOverrides[otherColorString] = palletteOverrides[otherColorString] ?? {}
+
+		palletteOverrides[colorString][otherColorString] = keyOverrideStates[colorString]
+		palletteOverrides[otherColorString][colorString] = keyOverrideStates[colorString]
+	})
+
+	drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, similarityKeySwatchClicked, palletteFullView)
 }
 
 function togglePalletteView() {
     palletteFullView = !palletteFullView;
-    drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, palletteFullView);
+    drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, similarityKeySwatchClicked, palletteFullView);
+}
+
 }
 
 //

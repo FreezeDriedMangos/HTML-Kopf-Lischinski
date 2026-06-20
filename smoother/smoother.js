@@ -333,7 +333,7 @@ function drawPallette(pallette, parentElementId = undefined, palletteSwatchSize 
 	})
 }
 
-function drawSimilarityGrid(pallette, parentElementId = undefined, palletteSwatchSize = 10, clickCallback = ()=>{}, fullView = true) {
+function drawSimilarityGrid(pallette, parentElementId = undefined, palletteSwatchSize = 10, clickCallback = ()=>{}, similarityKeySwatchClicked = ()=>{}, fullView = true) {
 	const palletteParent = parentElementId ? document.getElementById(parentElementId) : document.createElement('div')
 	if (!parentElementId) document.body.appendChild(palletteParent)
 
@@ -364,13 +364,23 @@ function drawSimilarityGrid(pallette, parentElementId = undefined, palletteSwatc
 	palletteParent.appendChild(emptyCorner)
 
 	// top row
-	pallette.forEach((color, c) => palletteParent.appendChild(createSwatch(rgbToHex(...color), 1, c+2)) )
+	pallette.forEach((color, c) => {
+		const yuvColor = RGBtoYUV(...color)
 
+		const columnKey = createSwatch(rgbToHex(...color), 1, c+2)
+		columnKey.onclick = () => similarityKeySwatchClicked(yuvColor)
+		palletteParent.appendChild(columnKey) 
+	})
+	
 	
 	// each subsequent row
 	pallette.forEach((color, r) => {
-		palletteParent.appendChild(createSwatch(rgbToHex(...color), r+2, 1))
 		const yuvColor = RGBtoYUV(...color)
+
+		const rowKey = createSwatch(rgbToHex(...color), r+2, 1)
+		rowKey.onclick = () => similarityKeySwatchClicked(yuvColor)
+		palletteParent.appendChild(rowKey)
+
 
 		// similarity chart
 		pallette.forEach((otherColor, c) => {
@@ -382,10 +392,7 @@ function drawSimilarityGrid(pallette, parentElementId = undefined, palletteSwatc
 				return
 			}
 
-
 			const yuvOtherColor = RGBtoYUV(...otherColor)
-
-
 
 			const overridenDissimilarity = palletteOverrides?.[yuvColor.toString()]?.[yuvOtherColor.toString()]
 			const dissimilarity = overridenDissimilarity ?? dissimilarityScore(yuvColor, yuvOtherColor)
@@ -398,6 +405,7 @@ function drawSimilarityGrid(pallette, parentElementId = undefined, palletteSwatc
 			}
 
 			const similaritySwatch = createSwatch(similarity, r+2, c+2)
+			similaritySwatch.id = yuvColor + "/" + yuvOtherColor
 			similaritySwatch.style.border = overridenDissimilarity == undefined ? '1px solid white' : '1px solid green'
 			similaritySwatch.onclick = () => clickCallback(yuvColor, yuvOtherColor, similaritySwatch)
 			palletteParent.appendChild(similaritySwatch)
