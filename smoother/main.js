@@ -591,6 +591,11 @@ function togglePalletteView() {
     drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, similarityKeySwatchClicked, palletteFullView);
 }
 
+function resetSimilarityGrid() {
+	if (confirm("Are you sure you want to clear any pallette overrides you've set? (This is irreversable.)")) {
+		palletteOverrides = {}
+		drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, similarityKeySwatchClicked, palletteFullView);
+	}
 }
 
 //
@@ -632,7 +637,7 @@ function main() {
 	recompute()
 	
 	pallette = getPallette() // not needed for the algortihm, so this is handled outside of compute() and rerender()
-	drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, palletteFullView)
+	drawSimilarityGrid(pallette, 'pallette', 10, similaritySwatchClicked, similarityKeySwatchClicked, palletteFullView)
 	
 	hasLoaded = true
 }
